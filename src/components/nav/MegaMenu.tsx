@@ -31,7 +31,7 @@ export function MegaMenu({ model, open, onOpenChange, triggerId }: Props) {
 
   const scheduleClose = () => {
     clearClose();
-    closeTimer.current = setTimeout(() => onOpenChange(false), 160);
+    closeTimer.current = setTimeout(() => onOpenChange(false), 180);
   };
 
   const close = useCallback(() => onOpenChange(false), [onOpenChange]);
@@ -78,13 +78,13 @@ export function MegaMenu({ model, open, onOpenChange, triggerId }: Props) {
         role="menu"
         aria-labelledby={triggerId}
         hidden={!open}
-        className={`border-b border-slate-200 bg-white shadow-lg ${
+        className={`border-b border-slate-200/90 bg-white/98 shadow-[0_16px_40px_-12px_rgba(15,23,42,0.12)] backdrop-blur-sm ${
           open ? "block" : "hidden"
         }`}
       >
-        <div className="mx-auto flex max-w-6xl gap-2 px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-6xl gap-1 px-4 py-4 sm:px-6 lg:max-w-7xl">
           <div
-            className="flex shrink-0 flex-col gap-0.5 border-r border-slate-100 pr-3"
+            className="flex shrink-0 flex-col gap-0.5 pr-3"
             role="tablist"
             aria-label="Categorias principais"
           >
@@ -96,10 +96,10 @@ export function MegaMenu({ model, open, onOpenChange, triggerId }: Props) {
                   type="button"
                   role="tab"
                   aria-selected={selected}
-                  className={`rounded-lg px-3 py-2 text-left text-sm ${
+                  className={`rounded-lg px-3 py-2 text-left text-sm transition-colors ${
                     selected
-                      ? "bg-slate-100 font-medium text-slate-900"
-                      : "text-slate-600 hover:bg-slate-50"
+                      ? "bg-sky-50 font-medium text-sky-900 ring-1 ring-sky-100"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                   }`}
                   onMouseEnter={() => setActiveId(col.id)}
                   onFocus={() => setActiveId(col.id)}
@@ -110,7 +110,7 @@ export function MegaMenu({ model, open, onOpenChange, triggerId }: Props) {
             })}
           </div>
 
-          <div className="flex min-w-0 flex-1 gap-6 overflow-x-auto py-2 pl-4">
+          <div className="flex min-w-0 flex-1 gap-5 overflow-x-auto border-l border-slate-200/80 py-1 pl-5">
             {active ? (
               <>
                 <MegaMenuColumn column={active} onNavigate={close} />
@@ -123,12 +123,12 @@ export function MegaMenu({ model, open, onOpenChange, triggerId }: Props) {
             ) : null}
           </div>
         </div>
-        <div className="border-t border-slate-100 bg-slate-50/80">
-          <div className="mx-auto max-w-6xl px-4 py-2.5 sm:px-6">
+        <div className="border-t border-slate-100 bg-gradient-to-b from-slate-50/90 to-slate-50/40">
+          <div className="mx-auto max-w-6xl px-4 py-2.5 sm:px-6 lg:max-w-7xl">
             <Link
               href={model.allCategoriesHref}
               onClick={close}
-              className="text-sm font-medium text-sky-700 hover:underline"
+              className="text-sm font-medium text-sky-700 transition-colors hover:text-sky-800"
             >
               Ver todas as categorias →
             </Link>
@@ -156,14 +156,27 @@ export function MegaMenuTrigger({
       type="button"
       aria-haspopup="menu"
       aria-expanded={open}
-      className="shrink-0 text-sm text-slate-600 hover:text-slate-900"
+      className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
       onClick={() => onOpenChange(!open)}
       onMouseEnter={() => onOpenChange(true)}
     >
       {label}
-      <span className="ml-0.5 text-slate-400" aria-hidden>
-        ▾
-      </span>
+      <svg
+        width="12"
+        height="12"
+        viewBox="0 0 12 12"
+        fill="none"
+        className={`text-slate-400 transition-transform ${open ? "rotate-180" : ""}`}
+        aria-hidden
+      >
+        <path
+          d="M2.5 4.5L6 8L9.5 4.5"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
     </button>
   );
 }

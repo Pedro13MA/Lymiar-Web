@@ -70,58 +70,40 @@ function buildColumn(
 
   const push = (n: TaxonomyTreeNode | undefined, popular?: boolean) => {
     if (!n || seen.has(n.slug)) return;
+    // Never duplicate the column hub label as a child link
+    if (n.slug === spec.anchorSlug && n.display_name === spec.label) return;
     seen.add(n.slug);
     items.push(linkFromNode(n, popular));
   };
 
-  // Prefer L2 sections → their first leaves / the L2 itself
-  if (anchor) {
-    for (const l2slug of spec.preferL2 || []) {
-      const l2 = anchor.children?.find((c) => c.slug === l2slug) || bySlug.get(l2slug);
-      if (!l2) continue;
-      if (l2.children?.length) {
-        for (const leaf of l2.children.slice(0, 8)) push(leaf);
-      } else {
-        push(l2);
-      }
-    }
-  }
-
-  // Leaf shortcuts (may live under other parents in v1.1)
-  const popularSet = new Set(
-    (spec.leafShortcuts || []).slice(0, 3),
-  );
-  for (const slug of spec.leafShortcuts || []) {
+  const popularSet = new Set(spec.leafShortcuts.slice(0, 4));
+  for (const slug of spec.leafShortcuts) {
     push(bySlug.get(slug), popularSet.has(slug));
   }
 
-  // If still empty and anchor has children, take direct children
   if (!items.length && anchor?.children?.length) {
-    for (const c of anchor.children.slice(0, 12)) {
-      if (c.children?.length) {
-        for (const leaf of c.children.slice(0, 4)) push(leaf);
-      } else {
-        push(c);
-      }
+    for (const c of anchor.children.slice(0, 8)) {
+      push(c);
     }
   }
 
-  // Still empty: skip column (node not in live tree and no leaves found)
   if (!items.length && !anchor) return null;
 
   const hubSlug = anchor?.slug || items[0]?.slug;
   if (!hubSlug) return null;
 
-  const primaryLeaf = items.find((i) => i.level === "leaf")?.slug;
+  const primaryLeaf =
+    items.find((i) => i.level === "leaf")?.slug ||
+    spec.leafShortcuts.find((s) => (bySlug.get(s)?.level ?? 0) >= 3);
 
   return {
     id: spec.id,
     label: spec.label,
     href: categoryHref(hubSlug),
     anchorSlug: hubSlug,
-    items: items.slice(0, 16),
+    items: items.slice(0, 14),
     seeAll: {
-      label: `Ver ${spec.label}`,
+      label: `Explorar ${spec.label}`,
       slug: hubSlug,
       href: categoryHref(hubSlug),
       level: anchor?.level === 1 ? "L1" : "L2",
@@ -150,22 +132,7 @@ export function buildMegaMenuFromTree(
     if (n) popularFallback.push(linkFromNode(n, true));
   }
 
-  const quickLinks: NavLinkItem[] = [
-    ...popularFallback.slice(0, 6),
-    {
-      label: "Padel",
-      slug: "padel_gear",
-      href: bySlug.has("padel_gear")
-        ? categoryHref("padel_gear")
-        : categoryHref("desporto"),
-    },
-    ...(bySlug.has("ssd")
-      ? [{ label: "SSD", slug: "ssd", href: categoryHref("ssd") }]
-      : []),
-    ...(bySlug.has("gpu")
-      ? [{ label: "GPUs", slug: "gpu", href: categoryHref("gpu") }]
-      : []),
-  ].filter((l, i, arr) => arr.findIndex((x) => x.slug === l.slug) === i);
+  const quickLinks: NavLinkItem[] = popularFallback.slice(0, 8);
 
   return {
     columns,

@@ -10,25 +10,35 @@ type Props = {
 
 export function MegaMenuColumn({ column, onNavigate }: Props) {
   return (
-    <div className="min-w-[11rem]">
+    <div className="min-w-[12rem] flex-1">
       <Link
         href={column.href}
         onClick={onNavigate}
-        className="font-display text-sm font-semibold text-slate-900 hover:text-sky-700"
+        className="font-display text-[15px] font-semibold tracking-tight text-slate-900 transition-colors hover:text-sky-700"
       >
         {column.label}
       </Link>
-      <ul className="mt-3 space-y-1.5">
+      <ul className="mt-3.5 grid gap-1">
         {column.items.map((item) => (
           <li key={item.slug}>
             <Link
               href={item.href}
               onClick={onNavigate}
-              className={`block text-sm hover:text-sky-700 ${
-                item.popular ? "font-medium text-slate-800" : "text-slate-600"
+              className={`group flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-slate-50 hover:text-sky-700 ${
+                item.popular
+                  ? "font-medium text-slate-800"
+                  : "text-slate-600"
               }`}
             >
-              {item.label}
+              {item.popular ? (
+                <span
+                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-500/80"
+                  aria-hidden
+                />
+              ) : (
+                <span className="w-1.5 shrink-0" aria-hidden />
+              )}
+              <span>{item.label}</span>
             </Link>
           </li>
         ))}
@@ -37,9 +47,10 @@ export function MegaMenuColumn({ column, onNavigate }: Props) {
         <Link
           href={column.seeAll.href}
           onClick={onNavigate}
-          className="mt-3 inline-block text-xs font-medium text-sky-700 hover:underline"
+          className="mt-4 inline-flex items-center text-xs font-semibold text-sky-700 transition-colors hover:text-sky-800"
         >
-          {column.seeAll.label} →
+          {column.seeAll.label}
+          <span className="ml-1" aria-hidden>→</span>
         </Link>
       ) : null}
     </div>
@@ -55,17 +66,17 @@ export function MegaMenuQuickLinks({
 }) {
   if (!links.length) return null;
   return (
-    <div className="min-w-[10rem] border-l border-slate-100 pl-5">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-        Atalhos
+    <div className="min-w-[10rem] shrink-0 border-l border-slate-200/80 pl-5">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+        Populares
       </p>
-      <ul className="mt-3 space-y-1.5">
+      <ul className="mt-3 grid gap-1">
         {links.map((l) => (
           <li key={`ql-${l.slug}`}>
             <Link
               href={l.href}
               onClick={onNavigate}
-              className="block text-sm text-slate-600 hover:text-sky-700"
+              className="block rounded-md px-2 py-1.5 text-sm text-slate-600 transition-colors hover:bg-slate-50 hover:text-sky-700"
             >
               {l.label}
             </Link>
@@ -85,24 +96,23 @@ export function MegaMenuBrands({
 }) {
   if (!brands.length) return null;
   return (
-    <div className="min-w-[9rem] border-l border-slate-100 pl-5">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+    <div className="min-w-[9rem] shrink-0 border-l border-slate-200/80 pl-5">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
         Marcas
       </p>
-      <ul className="mt-3 space-y-1.5">
+      <ul className="mt-3 flex flex-wrap gap-1.5">
         {brands.map((b) => (
           <li key={b.label}>
             <Link
               href={b.href}
               onClick={onNavigate}
-              className="block text-sm text-slate-600 hover:text-sky-700"
+              className="inline-block rounded-full border border-slate-200/90 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:border-sky-200 hover:bg-sky-50 hover:text-sky-800"
             >
               {b.label}
             </Link>
           </li>
         ))}
       </ul>
-      <p className="mt-3 text-[11px] text-slate-400">Contexto · não são categorias</p>
     </div>
   );
 }

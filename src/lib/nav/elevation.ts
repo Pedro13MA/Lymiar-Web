@@ -1,18 +1,16 @@
 /**
- * P3.2 presentation elevation — maps UI nav L1 to taxonomy slugs.
- * Does not invent taxonomy nodes; resolves against live tree when possible.
+ * P3.2 presentation elevation — curated leaf shortcuts per nav column.
+ * No preferL2 leaf dumps (avoids duplicate labels and taxonomy noise in UI).
  */
 
 export type NavElevationSpec = {
   id: string;
   label: string;
-  /** Preferred hub slug (L1 or L2 in taxonomy). */
+  /** Hub slug (L1 or elevated L2). */
   anchorSlug: string;
-  /** Optional L2 sections to surface first when present under anchor. */
-  preferL2?: string[];
-  /** Leaf shortcuts always offered if found anywhere in tree. */
-  leafShortcuts?: string[];
-  /** Featured brand query links (never as categories). */
+  /** Curated leaf slugs — order preserved; must exist in live tree. */
+  leafShortcuts: string[];
+  /** Featured brand filters (not categories). */
   brands?: { label: string; brand: string }[];
 };
 
@@ -21,16 +19,22 @@ export const NAV_ELEVATION: NavElevationSpec[] = [
     id: "computadores",
     label: "Computadores",
     anchorSlug: "informatica",
-    preferL2: ["computadores", "monitores", "armazenamento", "perifericos", "redes"],
     leafShortcuts: [
       "laptop",
       "desktop",
       "mini_pc",
+      "aio",
       "monitor",
-      "ssd",
+      "keyboard",
+      "mouse",
+      "headphones",
+      "webcam",
       "external_ssd",
-      "ram",
+      "usb_flash",
+      "enclosure",
+      "memory_card",
       "docking_station",
+      "laptop_bag",
     ],
     brands: [
       { label: "Apple", brand: "apple" },
@@ -53,6 +57,8 @@ export const NAV_ELEVATION: NavElevationSpec[] = [
       "psu",
       "cooler",
       "pc_case",
+      "nic",
+      "network_switch",
     ],
     brands: [
       { label: "ASUS", brand: "asus" },
@@ -65,7 +71,6 @@ export const NAV_ELEVATION: NavElevationSpec[] = [
     id: "telemoveis",
     label: "Telemóveis",
     anchorSlug: "telemoveis",
-    preferL2: ["dispositivos", "acessorios"],
     leafShortcuts: [
       "smartphone",
       "tablet",
@@ -123,7 +128,14 @@ export const NAV_ELEVATION: NavElevationSpec[] = [
     id: "tv_audio",
     label: "TV e Áudio",
     anchorSlug: "tv_audio",
-    leafShortcuts: ["tv", "soundbar", "headphones", "speakers", "projector", "media_streamer"],
+    leafShortcuts: [
+      "tv",
+      "soundbar",
+      "headphones",
+      "speakers",
+      "projector",
+      "media_streamer",
+    ],
     brands: [
       { label: "Samsung", brand: "samsung" },
       { label: "LG", brand: "lg" },
@@ -143,6 +155,7 @@ export const NAV_ELEVATION: NavElevationSpec[] = [
       "gimbal",
       "tripod",
       "camera_bag",
+      "camera_filter",
     ],
     brands: [
       { label: "DJI", brand: "dji" },
@@ -172,20 +185,19 @@ export const NAV_ELEVATION: NavElevationSpec[] = [
     id: "casa",
     label: "Casa & Eletro",
     anchorSlug: "casa",
-    preferL2: ["cozinha", "limpeza", "grandes_eletro", "clima"],
     leafShortcuts: [
       "air_fryer",
       "coffee_machine",
       "cookware",
+      "kitchen_appliance",
       "fridge",
-      "freezer",
       "washing_machine",
       "dishwasher",
-      "oven",
       "vacuum",
       "robot_vacuum",
       "iron",
       "climate_appliance",
+      "personal_care",
     ],
     brands: [
       { label: "Tefal", brand: "tefal" },
@@ -198,7 +210,13 @@ export const NAV_ELEVATION: NavElevationSpec[] = [
     id: "desporto",
     label: "Desporto",
     anchorSlug: "desporto",
-    leafShortcuts: ["padel_gear", "padel_apparel"],
+    leafShortcuts: [
+      "padel_gear",
+      "padel_apparel",
+      "sports_equipment",
+      "apparel",
+      "footwear",
+    ],
     brands: [
       { label: "Bullpadel", brand: "bullpadel" },
       { label: "NOX", brand: "nox" },
@@ -216,8 +234,6 @@ export const POPULAR_LEAF_FALLBACK = [
   "security_camera",
   "padel_gear",
   "air_fryer",
-  "fridge",
-  "camera",
 ] as const;
 
 /** Extra SSG slugs for elevated / v1.2 leaves (FE only). */
@@ -228,6 +244,10 @@ export const P32_EXTRA_STATIC_SLUGS = [
   "raquetes",
   "padel_gear",
   "padel_apparel",
+  "sports_equipment",
+  "apparel",
+  "footwear",
+  "personal_care",
   "security_camera",
   "smart_plug",
   "smart_bulb",
@@ -245,4 +265,5 @@ export const P32_EXTRA_STATIC_SLUGS = [
   "drone_accessory",
   "cozinha_utensilios",
   "cuidado_roupa",
+  "kitchen_appliance",
 ] as const;
