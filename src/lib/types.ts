@@ -335,6 +335,19 @@ export interface Product {
     } | null;
     policy_version?: string;
   } | null;
+  /** PDP read model v1 — Hub canonical bundle */
+  readModel?: {
+    version?: string;
+    consumerDecision?: Product["consumerDecision"];
+    priceAnalytics?: {
+      insights?: Product["insights"];
+      index?: Record<string, unknown>;
+      stats?: Record<string, unknown>;
+    };
+    taxonomy?: Record<string, unknown>;
+    discovery?: Product["recommendations"];
+    knowledge?: Product["knowledge"];
+  } | null;
   /** FASE 7.17 — descoberta (opcional). */
   recommendations?: {
     alternatives?: Array<Record<string, unknown>> | null;

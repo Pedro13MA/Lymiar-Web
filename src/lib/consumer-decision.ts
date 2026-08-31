@@ -27,6 +27,9 @@ export type ConsumerDecision = {
 
 const REASON_LABELS: Record<string, string> = {
   INSUFFICIENT_SAMPLE: "Ainda não temos evidências suficientes para um veredicto firme.",
+  INSUFFICIENT_SAMPLE_FOR_BUY: "Ainda não temos evidências suficientes para recomendar compra.",
+  INDEX_NOT_CONSUMER_VERDICT: "O índice editorial não substitui o veredicto ao comprador.",
+  INDEX_BAND_ELEVATED: "O índice sugere preço elevado face ao histórico.",
   INSUFFICIENT_EVIDENCE: "Ainda não temos evidências suficientes para um veredicto firme.",
   PRICE_NEAR_HISTORICAL_MIN: "O preço actual corresponde ao mínimo observado.",
   PRICE_BELOW_AVERAGE_RANGE: "O preço encontra-se abaixo da faixa habitual observada.",

@@ -470,6 +470,7 @@ export type ApiProductDetail = {
     evidence: Record<string, unknown>;
     policy_version: string;
   } | null;
+  readModel?: Record<string, unknown> | null;
   recommendation?: string | null;
   recommendationConfidence?: number | null;
   recommendations?: Product["recommendations"];
@@ -920,6 +921,9 @@ export function detailToProduct(d: ApiProductDetail): Product {
           evidence: d.consumerDecision.evidence ?? undefined,
           policy_version: d.consumerDecision.policy_version ?? undefined,
         }
+      : undefined,
+    readModel: d.readModel
+      ? (d.readModel as NonNullable<Product["readModel"]>)
       : undefined,
     recommendation: d.recommendation ?? undefined,
     recommendationConfidence:

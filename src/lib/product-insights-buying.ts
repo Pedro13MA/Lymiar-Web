@@ -1,7 +1,8 @@
 /**
  * FASE 7.16 — Product Insights (cliente).
  * Interpretação factual dos dados já carregados. Sem IA / sem previsões.
- * Prefere `product.insights` da API; fallback local com as mesmas regras.
+ * Prefere `product.insights` da API; fallback local só sem Hub (legado Fase 8).
+ * Veredicto comprador: sempre `product.consumerDecision` da API.
  */
 
 import type { Product } from "@/lib/types";
@@ -99,6 +100,7 @@ function cvPct(prices: number[]): number | null {
 }
 
 /** Computação local (espelha hub) — só dados do produto. */
+/** @deprecated Fase 8 — usar API `insights` + `consumerDecision`; fallback offline only */
 export function computeProductInsights(product: Product): ProductInsights {
   const history = [...(product.history || [])]
     .filter((h) => h.price > 0)
