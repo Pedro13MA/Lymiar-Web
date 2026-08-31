@@ -52,8 +52,11 @@ describe("consumer-decision", () => {
     const v = buildVerdictFromConsumerDecision(p, {
       spanDays: 30,
       storeCount: 2,
+      buyableStoreCount: 2,
       observations: 12,
+      eligibleObservations: 8,
       bestStoreLabel: "Worten",
+      bestStoreBuyable: true,
     });
     expect(v?.title).toBe("Recomendamos esperar");
     expect(v?.lines[0]).toBe(humanConsumerReason("PRICE_ELEVATED_VS_HISTORY"));
@@ -65,10 +68,63 @@ describe("consumer-decision", () => {
       buildVerdictFromConsumerDecision(baseProduct, {
         spanDays: 0,
         storeCount: 0,
+        buyableStoreCount: 0,
         observations: 0,
         bestStoreLabel: null,
       }),
     ).toBeNull();
+  });
+
+  it("uses monitor copy when analytics ready but signal unclear", () => {
+    const p = {
+      ...baseProduct,
+      consumerDecision: {
+        verdict: "UNKNOWN" as const,
+        confidence: 0.45,
+        reason: "PRICE_UNCLEAR_MONITOR",
+        evidence: {
+          eligible_observations: 3,
+          span_days: 33,
+          price_change_count: 2,
+          buyable_stores: 1,
+        },
+      },
+    };
+    const v = buildVerdictFromConsumerDecision(p, {
+      spanDays: 33,
+      storeCount: 2,
+      buyableStoreCount: 1,
+      observations: 34,
+      eligibleObservations: 3,
+      bestStoreLabel: "Worten",
+      bestStoreBuyable: true,
+    });
+    expect(v?.title).toBe("Preço na média — sem sinal claro de compra ou espera");
+    expect(v?.lines[0]).toContain("padrão claro");
+  });
+
+  it("uses mature radar copy when span is long but sample is thin", () => {
+    const p = {
+      ...baseProduct,
+      consumerDecision: {
+        verdict: "UNKNOWN" as const,
+        confidence: 0.4,
+        reason: "INSUFFICIENT_SAMPLE",
+        evidence: { eligible_observations: 3, span_days: 33 },
+      },
+    };
+    const v = buildVerdictFromConsumerDecision(p, {
+      spanDays: 33,
+      storeCount: 2,
+      buyableStoreCount: 1,
+      observations: 34,
+      eligibleObservations: 3,
+      bestStoreLabel: "Worten",
+      bestStoreBuyable: true,
+    });
+    expect(v?.title).toBe("Um mês de radar — o preço ainda não deu sinal claro");
+    expect(v?.lines[0]).toContain("um mês no radar");
+    expect(v?.lines.some((l) => l.includes("mudanças"))).toBe(true);
   });
 
   it("short labels for cart and projects", () => {

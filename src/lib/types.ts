@@ -331,6 +331,8 @@ export interface Product {
       sample_days?: number;
       span_days?: number;
       eligible_observations?: number;
+      price_change_count?: number;
+      buyable_stores?: number;
       stale_hours?: number | null;
     } | null;
     policy_version?: string;

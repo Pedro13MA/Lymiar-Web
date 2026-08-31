@@ -2,6 +2,12 @@
 
 import { useMemo, useState } from "react";
 import type { Offer } from "@/lib/types";
+import {
+  isOfferBuyable,
+  isOfferOutOfStock,
+  pickBestBuyableOffer,
+  pickCheapestOffer,
+} from "@/lib/product-offers";
 import { storeDisplayName, storeLogoUrl } from "@/lib/storeLogos";
 import { buttonVariants } from "@/components/ui/button";
 import { cn, formatEUR } from "@/lib/utils";
@@ -46,7 +52,7 @@ function StoreCellLogo({
 }
 
 function stockStatus(offer: Offer): { label: string; className: string } {
-  if (offer.inStock === false || offer.stockStatus === "out_of_stock") {
+  if (isOfferOutOfStock(offer)) {
     return { label: "Esgotado", className: "text-rose-700" };
   }
   if (offer.inStock === true || offer.stockStatus === "in_stock") {
@@ -87,19 +93,24 @@ function shippingCostLabel(offer: Offer): string {
   );
 }
 
-/** Cartões “Onde comprar” — visual tipo marketplace. */
+function sortOffersForDisplay(offers: Offer[]): Offer[] {
+  return [...offers]
+    .filter((o) => o.price > 0)
+    .sort((a, b) => {
+      const aBuy = isOfferBuyable(a);
+      const bBuy = isOfferBuyable(b);
+      if (aBuy !== bBuy) return aBuy ? -1 : 1;
+      return a.price - b.price;
+    });
+}
+
+/** Cartões “Onde comprar” — destaca melhor oferta comprável. */
 export function StoreCompareTable({ offers }: Props) {
-  const sorted = useMemo(
-    () => [...offers].sort((a, b) => a.price - b.price),
-    [offers],
-  );
+  const sorted = useMemo(() => sortOffersForDisplay(offers), [offers]);
+  const bestBuyable = useMemo(() => pickBestBuyableOffer(offers), [offers]);
+  const cheapest = useMemo(() => pickCheapestOffer(offers), [offers]);
 
-  const meta = useMemo(() => {
-    if (!sorted.length) return null;
-    return true;
-  }, [sorted]);
-
-  if (!sorted.length || !meta) {
+  if (!sorted.length) {
     return (
       <p className="text-sm text-slate-500">
         Sem ofertas de loja para este produto neste momento.
@@ -107,19 +118,36 @@ export function StoreCompareTable({ offers }: Props) {
     );
   }
 
+  const cheapestOosOnly =
+    cheapest != null &&
+    bestBuyable != null &&
+    isOfferOutOfStock(cheapest) &&
+    cheapest.price < bestBuyable.price;
+
   return (
     <ul className="grid gap-3 sm:grid-cols-2">
-      {sorted.map((offer, idx) => {
+      {sorted.map((offer) => {
         const slug = offer.slug || offer.store || "";
         const name = storeDisplayName(slug || offer.storeName, offer.storeName);
         const stock = stockStatus(offer);
+        const isBestBuyable =
+          bestBuyable != null &&
+          offer.store === bestBuyable.store &&
+          offer.price === bestBuyable.price &&
+          isOfferBuyable(offer);
+        const isCheapestOos =
+          cheapestOosOnly &&
+          offer.store === cheapest!.store &&
+          offer.price === cheapest!.price &&
+          isOfferOutOfStock(offer);
 
         return (
           <li
             key={`${offer.store}-${offer.url}`}
             className={cn(
               "rounded-2xl border border-slate-200/80 bg-white p-4",
-              idx === 0 && "border-emerald-200 bg-emerald-50/40",
+              isBestBuyable && "border-emerald-200 bg-emerald-50/40",
+              isCheapestOos && "border-amber-200/80 bg-amber-50/30",
             )}
           >
             <div className="flex items-start gap-3">
@@ -136,9 +164,13 @@ export function StoreCompareTable({ offers }: Props) {
                   </p>
                 </div>
 
-                {idx === 0 ? (
-                  <p className="mt-1 text-xs font-semibold text-amber-700">
-                    ⭐ Melhor oferta
+                {isBestBuyable ? (
+                  <p className="mt-1 text-xs font-semibold text-emerald-800">
+                    ⭐ Melhor preço disponível
+                  </p>
+                ) : isCheapestOos ? (
+                  <p className="mt-1 text-xs font-semibold text-amber-800">
+                    Menor preço listado — esgotado
                   </p>
                 ) : null}
 
@@ -164,11 +196,15 @@ export function StoreCompareTable({ offers }: Props) {
                   target="_blank"
                   rel="noopener noreferrer"
                   className={cn(
-                    buttonVariants({ variant: "default", size: "default" }),
+                    buttonVariants({
+                      variant: isOfferBuyable(offer) ? "default" : "outline",
+                      size: "default",
+                    }),
                     "mt-4 w-full justify-center font-semibold",
+                    !isOfferBuyable(offer) && "border-slate-300 text-slate-700",
                   )}
                 >
-                  Comprar
+                  {isOfferBuyable(offer) ? "Comprar" : "Ver na loja"}
                 </a>
               </div>
             </div>

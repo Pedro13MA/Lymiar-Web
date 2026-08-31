@@ -184,7 +184,7 @@ export function PriceHistoryChart({
         )}
         <div
           className={cn(
-            "flex flex-wrap gap-1 rounded-xl bg-slate-100/80 p-1",
+            "flex gap-1 overflow-x-auto rounded-xl bg-slate-100/80 p-1 snap-x snap-mandatory scrollbar-thin",
             hideTitle && "sm:ml-auto",
           )}
           role="group"
@@ -196,10 +196,10 @@ export function PriceHistoryChart({
               type="button"
               onClick={() => setDays(p.days)}
               className={cn(
-                "inline-flex min-h-10 items-center justify-center rounded-lg px-2.5 text-xs font-medium transition-colors sm:px-3",
+                "inline-flex min-h-10 shrink-0 snap-start items-center justify-center rounded-lg px-3 text-xs font-medium transition-colors",
                 days === p.days
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-500 hover:text-slate-800",
+                  ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/80"
+                  : "text-slate-500 hover:bg-white/60 hover:text-slate-800",
               )}
             >
               {p.label}
@@ -220,6 +220,39 @@ export function PriceHistoryChart({
             minDate={extremes.minDate}
             maxDate={extremes.maxDate}
           />
+          <ul
+            className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500"
+            aria-label="Legenda do gráfico"
+          >
+            <li className="flex items-center gap-1.5">
+              <span
+                className="h-2.5 w-2.5 rounded-full bg-[#e2550f]"
+                aria-hidden
+              />
+              Melhor oferta do dia
+            </li>
+            <li className="flex items-center gap-1.5">
+              <span
+                className="h-2.5 w-2.5 rounded-full bg-emerald-600"
+                aria-hidden
+              />
+              Mínimo no período
+            </li>
+            <li className="flex items-center gap-1.5">
+              <span
+                className="h-2.5 w-2.5 rounded-full bg-rose-700"
+                aria-hidden
+              />
+              Máximo no período
+            </li>
+            <li className="flex items-center gap-1.5">
+              <span
+                className="h-3 w-3 rounded-sm bg-orange-200/80"
+                aria-hidden
+              />
+              Outras lojas (faixa)
+            </li>
+          </ul>
           <ul className="grid gap-3 sm:grid-cols-3">
             <SummaryCard
               tone="current"
@@ -241,10 +274,10 @@ export function PriceHistoryChart({
               value={safeMax}
             />
           </ul>
-          <p className="text-xs text-slate-500">
-            A linha mostra só a loja mais barata em cada dia. Preços de outras
-            lojas, se existirem, aparecem só na faixa clara — não entram no
-            mínimo/máximo histórico.
+          <p className="text-xs leading-relaxed text-slate-500">
+            A linha mostra a loja mais barata em cada dia. A faixa clara indica
+            outras lojas no mesmo dia — não entra no mínimo/máximo. Dias sem nova
+            observação mantêm o último preço (carry-forward).
           </p>
         </>
       ) : null}

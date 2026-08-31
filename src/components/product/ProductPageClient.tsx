@@ -35,6 +35,7 @@ import {
   ProductPageP34,
   ProductPdpSkeleton,
 } from "@/components/product/p34";
+import { pickBestBuyableOffer, countBuyableOffers, isOfferBuyable } from "@/lib/product-offers";
 import { storeDisplayName } from "@/lib/storeLogos";
 import { formatEUR } from "@/lib/utils";
 import Link from "next/link";
@@ -329,12 +330,15 @@ export function ProductPageClient({ slug }: Props) {
     metrics?.storeCount ?? 0,
     product.offers.length,
   );
+  const buyableStoreCount = countBuyableOffers(product.offers);
   const spanDays = observedSpanDays(historyForInsights);
   const observations = Math.max(
     historyForInsights.length,
     metrics?.samples90d ?? 0,
     metrics?.samples30d ?? 0,
   );
+  const eligibleObservations =
+    product.consumerDecision?.evidence?.eligible_observations ?? null;
 
   const avgObserved = metrics?.avg30d ?? product.avg30d;
   const currentIsMin = isAbsoluteHistoricalMin(
@@ -343,19 +347,22 @@ export function ProductPageClient({ slug }: Props) {
   );
   const aboveAvg = product.currentPrice > avgObserved;
 
-  const sortedOffers = [...product.offers].sort((a, b) => a.price - b.price);
-  const bestOffer = sortedOffers[0] ?? null;
+  const bestOffer = pickBestBuyableOffer(product.offers);
   const bestStore = bestOffer?.storeName || bestOffer?.store || null;
   const bestStoreLabel = bestStore
     ? storeDisplayName(bestStore, bestStore)
     : null;
+  const bestStoreBuyable = bestOffer ? isOfferBuyable(bestOffer) : false;
 
   const verdict =
     buildVerdictFromConsumerDecision(product, {
       spanDays,
       storeCount,
+      buyableStoreCount,
       observations,
+      eligibleObservations,
       bestStoreLabel,
+      bestStoreBuyable,
     }) ??
     buildVerdictCopy({
       spanDays,
@@ -393,7 +400,9 @@ export function ProductPageClient({ slug }: Props) {
         confidence={confidence}
         spanDays={spanDays}
         storeCount={storeCount}
+        buyableStoreCount={buyableStoreCount}
         observations={observations}
+        eligibleObservations={eligibleObservations}
         similar={similar}
       />
     );

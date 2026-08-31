@@ -17,6 +17,11 @@ import type { Product } from "@/lib/types";
 import { cn, formatEUR } from "@/lib/utils";
 import { storeDisplayName } from "@/lib/storeLogos";
 import { displayLeafOrBrand } from "@/lib/product-display";
+import {
+  isOfferOutOfStock,
+  pickBestBuyableOffer,
+  pickCheapestOffer,
+} from "@/lib/product-offers";
 
 type Props = {
   product: Product;
@@ -47,13 +52,23 @@ export function ProductHero({ product }: Props) {
     brand: product.brand,
   });
 
-  const bestOffer = useMemo(() => {
-    const sorted = [...(product.offers ?? [])].sort((a, b) => a.price - b.price);
-    return sorted[0] ?? null;
-  }, [product.offers]);
+  const cheapestOffer = useMemo(
+    () => pickCheapestOffer(product.offers ?? []),
+    [product.offers],
+  );
+  const buyableOffer = useMemo(
+    () => pickBestBuyableOffer(product.offers ?? []),
+    [product.offers],
+  );
+  const heroOffer = buyableOffer ?? cheapestOffer;
+  const cheapestIsOos =
+    cheapestOffer != null &&
+    buyableOffer != null &&
+    cheapestOffer.price < buyableOffer.price &&
+    isOfferOutOfStock(cheapestOffer);
 
-  const bestStore = bestOffer?.storeName || bestOffer?.store || null;
-  const buyUrl = bestOffer?.url || null;
+  const bestStore = heroOffer?.storeName || heroOffer?.store || null;
+  const buyUrl = heroOffer?.url || null;
 
   const [fav, setFav] = useState(false);
   const [listOpen, setListOpen] = useState(false);
@@ -109,28 +124,50 @@ export function ProductHero({ product }: Props) {
           </h1>
 
           <p className="font-display text-4xl font-bold tabular-nums tracking-tight text-slate-900 sm:text-[2.75rem]">
-            {formatEUR(product.currentPrice)}
+            {formatEUR(heroOffer?.price ?? product.currentPrice)}
           </p>
 
           <div className="space-y-1.5 text-sm text-slate-600">
             {bestStore ? (
               <p>
-                <span className="text-slate-500">Loja mais barata · </span>
+                <span className="text-slate-500">
+                  {buyableOffer
+                    ? "Melhor preço disponível · "
+                    : "Menor preço listado · "}
+                </span>
                 <span className="font-medium text-slate-900">
                   {storeDisplayName(bestStore, bestStore)}
                 </span>
+                {!buyableOffer && cheapestOffer ? (
+                  <span className="text-rose-700"> · esgotado</span>
+                ) : null}
+              </p>
+            ) : null}
+            {cheapestIsOos ? (
+              <p className="text-xs text-slate-500">
+                {formatEUR(cheapestOffer!.price)} em{" "}
+                {storeDisplayName(
+                  cheapestOffer!.storeName || cheapestOffer!.store || "",
+                  cheapestOffer!.storeName,
+                )}{" "}
+                — esgotado. Comprar em{" "}
+                {storeDisplayName(
+                  buyableOffer!.storeName || buyableOffer!.store || "",
+                  buyableOffer!.storeName,
+                )}{" "}
+                por {formatEUR(buyableOffer!.price)}.
               </p>
             ) : null}
             <p>
               <span className="text-slate-500">Entrega · </span>
               <span className="font-medium text-slate-900">
-                {humanDelivery(bestOffer?.shippingInfo)}
+                {humanDelivery(heroOffer?.shippingInfo)}
               </span>
             </p>
             <p>
               <span className="text-slate-500">Portes · </span>
               <span className="font-medium text-slate-900">
-                {humanShippingCost(bestOffer?.shippingDetails?.shippingCost)}
+                {humanShippingCost(heroOffer?.shippingDetails?.shippingCost)}
               </span>
             </p>
           </div>
@@ -143,7 +180,7 @@ export function ProductHero({ product }: Props) {
                 rel="noopener noreferrer"
                 className="pdp-cta"
               >
-                Ver na loja
+                {buyableOffer ? "Ver na loja" : "Consultar na loja"}
               </a>
             ) : null}
 
