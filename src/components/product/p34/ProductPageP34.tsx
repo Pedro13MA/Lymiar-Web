@@ -16,7 +16,9 @@ import type { DiscoveryCard } from "@/lib/product-discovery";
 import type { BreadcrumbCrumb } from "@/lib/product-breadcrumb";
 import {
   consumerVerdictBadge,
+  consumerVerdictBadgeForPdp,
   consumerVerdictTone,
+  formatPdpEvidenceFootnote,
   humanConsumerReason,
   resolveConsumerDecision,
 } from "@/lib/consumer-decision";
@@ -40,7 +42,9 @@ type Props = {
   confidence: Confidence;
   spanDays: number;
   storeCount: number;
+  buyableStoreCount: number;
   observations: number;
+  eligibleObservations?: number | null;
   similar: DiscoveryCard[];
 };
 
@@ -67,20 +71,39 @@ export function ProductPageP34({
   verdict,
   spanDays,
   storeCount,
+  buyableStoreCount,
   observations,
+  eligibleObservations,
   similar,
 }: Props) {
   const thinHistory = spanDays < Math.min(14, MIN_HISTORY_SPAN_DAYS / 2);
+  const consumer = resolveConsumerDecision(product);
+  const evidenceFootnote = formatPdpEvidenceFootnote({
+    spanDays,
+    listedStoreCount: storeCount,
+    buyableStoreCount,
+    chartPointCount: observations,
+    eligibleObservations,
+    priceChangeCount: consumer?.evidence?.price_change_count,
+  });
   const navItems = breadcrumbs.map((c) => ({
     label: c.label,
     href: c.href,
   }));
-  const consumer = resolveConsumerDecision(product);
+  const eligibleObs =
+    eligibleObservations ??
+    consumer?.evidence?.eligible_observations ??
+    null;
+  const pdpCtx = {
+    spanDays,
+    eligibleObservations: eligibleObs,
+    reason: consumer?.reason,
+  };
   const tone = consumer
     ? consumerVerdictTone(consumer.verdict)
     : verdictTone(product.decision?.semaphore);
   const badge = consumer
-    ? consumerVerdictBadge(consumer.verdict)
+    ? consumerVerdictBadgeForPdp(consumer.verdict, pdpCtx)
     : verdictBadge(tone);
   const reason =
     verdict.lines.find((l) => l.trim().length > 0) ||
@@ -129,16 +152,44 @@ export function ProductPageP34({
                   ))}
                 </ul>
               ) : null}
-              <p className="pt-1 text-sm text-slate-500">
-                Baseado em {spanDays} dias observados · {storeCount}{" "}
-                {storeCount === 1 ? "loja" : "lojas"} · {observations}{" "}
-                {observations === 1 ? "observação" : "observações"}
-              </p>
+              {evidenceFootnote ? (
+                <p className="pt-1 text-sm text-slate-500">{evidenceFootnote}</p>
+              ) : null}
             </div>
           </article>
         </section>
 
-        {/* 2. Lojas */}
+        {/* 3. Histórico — antes das lojas: ver evolução, depois onde comprar */}
+        <section
+          id="historico"
+          className="pdp-section space-y-4"
+          aria-labelledby="p34-history-heading"
+        >
+          <div>
+            <p className="pdp-kicker">Histórico</p>
+            <h2
+              id="p34-history-heading"
+              className="mt-2 font-display text-xl font-bold text-slate-900 sm:text-2xl"
+            >
+              Como o preço evoluiu
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Melhor oferta de cada dia — passa o rato ou toca nos pontos para ver
+              o detalhe.
+            </p>
+          </div>
+          <ProductHistoryHint thin={thinHistory} />
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 sm:p-4">
+            <PriceHistoryChart
+              productId={slug}
+              currentPrice={product.currentPrice}
+              fallbackHistory={product.history}
+              hideTitle
+            />
+          </div>
+        </section>
+
+        {/* 4. Lojas */}
         <section
           id="lojas"
           className="pdp-section space-y-4"
@@ -153,7 +204,7 @@ export function ProductPageP34({
               Lojas observadas
             </h2>
             <p className="mt-1 text-sm text-slate-500">
-              Preço actual por loja — sem misturar cupões no valor.
+              Preço actual por loja — destacamos onde há stock confirmado.
             </p>
           </div>
           {product.offers?.length ? (
@@ -163,33 +214,7 @@ export function ProductPageP34({
           )}
         </section>
 
-        {/* 3. Histórico */}
-        <section
-          id="historico"
-          className="pdp-section space-y-4"
-          aria-labelledby="p34-history-heading"
-        >
-          <div>
-            <p className="pdp-kicker">Histórico</p>
-            <h2
-              id="p34-history-heading"
-              className="mt-2 font-display text-xl font-bold text-slate-900 sm:text-2xl"
-            >
-              Como o preço evoluiu
-            </h2>
-          </div>
-          <ProductHistoryHint thin={thinHistory} />
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 sm:p-4">
-            <PriceHistoryChart
-              productId={slug}
-              currentPrice={product.currentPrice}
-              fallbackHistory={product.history}
-              hideTitle
-            />
-          </div>
-        </section>
-
-        {/* 4. Cupões — só se alguma loja do produto tiver campanha/cupão */}
+        {/* 5. Cupões — só se alguma loja do produto tiver campanha/cupão */}
         <ProductCouponsSection product={product} />
 
         <ProductTelegramStrip className="pdp-telegram" />
