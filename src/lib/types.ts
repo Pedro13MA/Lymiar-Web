@@ -319,6 +319,22 @@ export interface Product {
   } | null;
   recommendation?: string | null;
   recommendationConfidence?: number | null;
+  /** Canónico — BUY | WAIT | UNKNOWN (Hub ConsumerDecision). */
+  consumerDecision?: {
+    verdict: "BUY" | "WAIT" | "UNKNOWN";
+    confidence: number;
+    reason: string;
+    evidence?: {
+      current_price?: number | null;
+      historical_min?: number | null;
+      historical_max?: number | null;
+      sample_days?: number;
+      span_days?: number;
+      eligible_observations?: number;
+      stale_hours?: number | null;
+    } | null;
+    policy_version?: string;
+  } | null;
   /** FASE 7.17 — descoberta (opcional). */
   recommendations?: {
     alternatives?: Array<Record<string, unknown>> | null;

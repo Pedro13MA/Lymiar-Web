@@ -24,6 +24,7 @@ import {
 } from "@/lib/product-discovery";
 import { pickSimilarAlternatives } from "@/lib/product-similar-alternatives";
 import { buildPremiumProductBreadcrumbs } from "@/lib/product-breadcrumb-premium";
+import { buildVerdictFromConsumerDecision } from "@/lib/consumer-decision";
 import { isP34ProductPageEnabled } from "@/lib/product/flags";
 import { PriceHistoryChartLazy as PriceHistoryChart } from "@/components/PriceHistoryChartLazy";
 import { ProductBreadcrumb } from "@/components/product/ProductBreadcrumb";
@@ -349,15 +350,22 @@ export function ProductPageClient({ slug }: Props) {
     ? storeDisplayName(bestStore, bestStore)
     : null;
 
-  const verdict = buildVerdictCopy({
-    spanDays,
-    storeCount,
-    aboveAvg,
-    currentIsMin,
-    confidenceScore: confidence.score,
-    bestStoreLabel,
-    observations,
-  });
+  const verdict =
+    buildVerdictFromConsumerDecision(product, {
+      spanDays,
+      storeCount,
+      observations,
+      bestStoreLabel,
+    }) ??
+    buildVerdictCopy({
+      spanDays,
+      storeCount,
+      aboveAvg,
+      currentIsMin,
+      confidenceScore: confidence.score,
+      bestStoreLabel,
+      observations,
+    });
 
   const breadcrumbs = buildPremiumProductBreadcrumbs({
     category: product.category,

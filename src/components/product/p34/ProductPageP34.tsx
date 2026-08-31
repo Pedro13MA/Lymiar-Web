@@ -14,6 +14,12 @@ import {
 import { ProductSimilarSection } from "@/components/product/p34/ProductDiscoveryPlaceholders";
 import type { DiscoveryCard } from "@/lib/product-discovery";
 import type { BreadcrumbCrumb } from "@/lib/product-breadcrumb";
+import {
+  consumerVerdictBadge,
+  consumerVerdictTone,
+  humanConsumerReason,
+  resolveConsumerDecision,
+} from "@/lib/consumer-decision";
 import type { DecisionSemaphore, Product } from "@/lib/types";
 import { MIN_HISTORY_SPAN_DAYS } from "@/lib/product-insights";
 import { formatEUR } from "@/lib/utils";
@@ -69,9 +75,16 @@ export function ProductPageP34({
     label: c.label,
     href: c.href,
   }));
-  const tone = verdictTone(product.decision?.semaphore);
+  const consumer = resolveConsumerDecision(product);
+  const tone = consumer
+    ? consumerVerdictTone(consumer.verdict)
+    : verdictTone(product.decision?.semaphore);
+  const badge = consumer
+    ? consumerVerdictBadge(consumer.verdict)
+    : verdictBadge(tone);
   const reason =
     verdict.lines.find((l) => l.trim().length > 0) ||
+    (consumer ? humanConsumerReason(consumer.reason) : null) ||
     "Com base no histórico observado.";
 
   return (
@@ -94,7 +107,7 @@ export function ProductPageP34({
             className={`pdp-verdict mt-4 pdp-verdict-${tone}`}
           >
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 sm:px-6">
-              <span className="pdp-badge">{verdictBadge(tone)}</span>
+              <span className="pdp-badge">{badge}</span>
               <p className="font-display text-2xl font-bold tabular-nums tracking-tight text-slate-900 sm:text-3xl">
                 {formatEUR(product.currentPrice)}
               </p>

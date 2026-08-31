@@ -912,6 +912,15 @@ export function detailToProduct(d: ApiProductDetail): Product {
     insights: d.insights
       ? (d.insights as NonNullable<Product["insights"]>)
       : undefined,
+    consumerDecision: d.consumerDecision
+      ? {
+          verdict: d.consumerDecision.verdict,
+          confidence: Number(d.consumerDecision.confidence) || 0,
+          reason: String(d.consumerDecision.reason || ""),
+          evidence: d.consumerDecision.evidence ?? undefined,
+          policy_version: d.consumerDecision.policy_version ?? undefined,
+        }
+      : undefined,
     recommendation: d.recommendation ?? undefined,
     recommendationConfidence:
       typeof d.recommendationConfidence === "number"

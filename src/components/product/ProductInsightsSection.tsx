@@ -1,6 +1,11 @@
 "use client";
 
 import {
+  consumerConfidencePct,
+  consumerVerdictBadge,
+  resolveConsumerDecision,
+} from "@/lib/consumer-decision";
+import {
   resolveProductInsights,
   type InsightTone,
 } from "@/lib/product-insights-buying";
@@ -29,6 +34,13 @@ function Stars({ n }: { n: number }) {
  */
 export function ProductInsightsSection({ product }: Props) {
   const insights = resolveProductInsights(product);
+  const consumer = resolveConsumerDecision(product);
+  const headlineLabel = consumer
+    ? consumerVerdictBadge(consumer.verdict)
+    : insights.recommendationLabel;
+  const headlineConfidence = consumer
+    ? consumerConfidencePct(consumer)
+    : insights.confidence;
 
   return (
     <section id="insights" className="scroll-mt-20 space-y-6">
@@ -42,11 +54,9 @@ export function ProductInsightsSection({ product }: Props) {
           </p>
         </div>
         <div className="text-right text-sm">
-          <p className="font-semibold text-slate-800">
-            {insights.recommendationLabel}
-          </p>
+          <p className="font-semibold text-slate-800">{headlineLabel}</p>
           <p className="text-xs text-slate-400">
-            Confiança {insights.confidence}%
+            Confiança {headlineConfidence}%
           </p>
         </div>
       </div>
