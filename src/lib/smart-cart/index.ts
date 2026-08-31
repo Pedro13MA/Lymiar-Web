@@ -15,6 +15,10 @@ import type {
   SmartCartSnapshot,
 } from "@/lib/smart-cart/types";
 import type { Offer, Product } from "@/lib/types";
+import {
+  consumerVerdictBadge,
+  resolveConsumerDecision,
+} from "@/lib/consumer-decision";
 import { resolveProductInsights } from "@/lib/product-insights-buying";
 import { bestSavingsTip, recommendationsFromApi } from "@/lib/product-discovery";
 
@@ -60,6 +64,7 @@ export function productToCartDraft(
   qty = 1,
 ): Omit<CartItem, "id" | "addedAt" | "updatedAt" | "status"> {
   const insights = resolveProductInsights(product);
+  const consumer = resolveConsumerDecision(product);
   const tip = bestSavingsTip(
     product,
     recommendationsFromApi(product.recommendations),
@@ -78,8 +83,12 @@ export function productToCartDraft(
     chipsetModel: product.chipsetModel,
     lymiarIndex: product.decision.lymiarIndex.value,
     condition: product.condition,
-    insightRecommendation: insights.recommendation,
-    insightLabel: insights.recommendationLabel,
+    insightRecommendation: consumer
+      ? consumer.verdict
+      : insights.recommendation,
+    insightLabel: consumer
+      ? consumerVerdictBadge(consumer.verdict)
+      : insights.recommendationLabel,
     savingsTipEur: tip?.eur ?? null,
   };
 }

@@ -5,6 +5,7 @@
  */
 
 import type { Product } from "@/lib/types";
+import { resolveConsumerInsightLabel } from "@/lib/consumer-decision";
 
 export type InsightRecommendation =
   | "BUY_NOW"
@@ -488,6 +489,8 @@ export function recommendationShortLabel(
 
 /** Rótulo curto para projetos / cart (factual). */
 export function priceInsightShort(product: Product): string {
+  const fromConsumer = resolveConsumerInsightLabel(product);
+  if (fromConsumer) return fromConsumer;
   const i = resolveProductInsights(product);
   if (i.recommendation === "INSUFFICIENT_DATA") return "Poucos dados";
   if (

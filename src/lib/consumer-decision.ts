@@ -78,6 +78,19 @@ export function humanConsumerReason(reason: string | null | undefined): string {
 }
 
 /** Confiança 0–100 para UI (API envia 0–1). */
+export function consumerVerdictShortLabel(verdict: ConsumerVerdict): string {
+  if (verdict === "BUY") return "Bom preço";
+  if (verdict === "WAIT") return "Preço elevado";
+  return "Poucos dados";
+}
+
+export function resolveConsumerInsightLabel(product: Product): string | null {
+  const cd = resolveConsumerDecision(product);
+  if (!cd) return null;
+  return consumerVerdictShortLabel(cd.verdict);
+}
+
+/** Confiança 0–100 para UI (API envia 0–1). */
 export function consumerConfidencePct(cd: ConsumerDecision): number {
   const raw = cd.confidence;
   if (!Number.isFinite(raw)) return 0;

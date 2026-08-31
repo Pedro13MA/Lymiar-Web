@@ -6,6 +6,8 @@ import {
   consumerVerdictTone,
   humanConsumerReason,
   resolveConsumerDecision,
+  consumerVerdictShortLabel,
+  resolveConsumerInsightLabel,
 } from "@/lib/consumer-decision";
 import type { Product } from "@/lib/types";
 
@@ -67,5 +69,17 @@ describe("consumer-decision", () => {
         bestStoreLabel: null,
       }),
     ).toBeNull();
+  });
+
+  it("short labels for cart and projects", () => {
+    const p = {
+      ...baseProduct,
+      consumerDecision: {
+        verdict: "WAIT" as const,
+        confidence: 0.5,
+        reason: "PRICE_ELEVATED_VS_HISTORY",
+      },
+    };
+    expect(resolveConsumerInsightLabel(p)).toBe("Preço elevado");
   });
 });
