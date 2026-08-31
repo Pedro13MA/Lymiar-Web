@@ -18,7 +18,10 @@ export async function generateStaticParams() {
     slugs.add(p.ean);
   }
   try {
-    const [now, wait] = await Promise.all([getDealsNow(30), getDealsWait(30)]);
+    const [now, wait] = await Promise.all([
+      getDealsNow(100),
+      getDealsWait(100),
+    ]);
     for (const r of [...now.results, ...wait.results]) {
       slugs.add(r.slug);
       slugs.add(r.ean);

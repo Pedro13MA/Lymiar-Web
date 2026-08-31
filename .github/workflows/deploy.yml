@@ -23,7 +23,17 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
+        env:
+          NEXT_PUBLIC_API_URL: https://api.lymiar.com
+          NEXT_PUBLIC_P32_NAVIGATION: "true"
+          NEXT_PUBLIC_P33_SEARCH_ENGINE: "true"
+          NEXT_PUBLIC_P34_PRODUCT_PAGE: "true"
       - run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: https://api.lymiar.com
+          NEXT_PUBLIC_P32_NAVIGATION: "true"
+          NEXT_PUBLIC_P33_SEARCH_ENGINE: "true"
+          NEXT_PUBLIC_P34_PRODUCT_PAGE: "true"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: out

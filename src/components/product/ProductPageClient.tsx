@@ -39,8 +39,19 @@ import { pickBestBuyableOffer, countBuyableOffers, isOfferBuyable } from "@/lib/
 import { storeDisplayName } from "@/lib/storeLogos";
 import { formatEUR } from "@/lib/utils";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 type Props = { slug: string };
+
+/** Slug from browser path — static fallback shell must not trust baked RSC slug. */
+function slugFromPathname(pathname: string | null, fallback: string): string {
+  if (!pathname) return fallback;
+  const m = pathname.match(/^\/p\/([^/]+)\/?$/);
+  if (!m?.[1]) return fallback;
+  const segment = decodeURIComponent(m[1]).trim();
+  if (!segment || segment === "fallback") return fallback;
+  return segment;
+}
 
 function Stars({ stars }: { stars: number }) {
   const s = Math.max(0, Math.min(5, Math.round(stars)));
@@ -177,7 +188,9 @@ function buildVerdictCopy(opts: {
   };
 }
 
-export function ProductPageClient({ slug }: Props) {
+export function ProductPageClient({ slug: slugProp }: Props) {
+  const pathname = usePathname();
+  const slug = slugFromPathname(pathname, slugProp);
   const [product, setProduct] = useState<Product | null>(null);
   const [metrics, setMetrics] = useState<ProductMetricsOut | null>(null);
   const [seriesHistory, setSeriesHistory] = useState<PricePoint[]>([]);
