@@ -2,6 +2,7 @@
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { apiGet, isAbortError } from "@/lib/api-client";
+import { pickBestBuyableOffer } from "@/lib/product-offers";
 import type {
   DecisionScore,
   DecisionSemaphore,
@@ -861,7 +862,8 @@ export function detailToProduct(d: ApiProductDetail): Product {
   }));
   const listPrice = d.currentPrice;
   const effectivePrice = null;
-  const displayPrice = listPrice;
+  const buyableOffer = pickBestBuyableOffer(offers);
+  const displayPrice = buyableOffer?.price ?? listPrice;
   const bestOffer =
     offers.length > 0
       ? [...offers].sort((a, b) => a.price - b.price)[0]
