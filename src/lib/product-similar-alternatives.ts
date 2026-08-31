@@ -60,6 +60,8 @@ function sameCategory(current: Product, card: DiscoveryCard): boolean {
   const curName = current.name || "";
   const cardName = card.name || "";
 
+  if (ABSURD_RE.test(fold(cardName))) return false;
+
   if (!sameFamily(curName, cardName)) return false;
 
   if (curLeaf && cardLeaf) {
