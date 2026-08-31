@@ -19,8 +19,8 @@ export async function generateStaticParams() {
   }
   try {
     const [now, wait] = await Promise.all([
-      getDealsNow(100),
-      getDealsWait(100),
+      getDealsNow(50),
+      getDealsWait(50),
     ]);
     for (const r of [...now.results, ...wait.results]) {
       slugs.add(r.slug);
