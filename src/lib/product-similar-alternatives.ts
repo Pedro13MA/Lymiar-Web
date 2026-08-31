@@ -12,6 +12,8 @@ const ABSURD_RE =
 const UNUSABLE_LEAF =
   /^(unclassified|non_catalog|unmapped|other|outros|accessory)?$/i;
 
+const PHONE_FAMILIES = new Set(["iphone", "galaxy", "pixel", "xiaomi_phone"]);
+
 function fold(s: string): string {
   return s
     .normalize("NFKD")
@@ -50,8 +52,9 @@ function productFamily(name: string): string {
 function sameFamily(currentName: string, cardName: string): boolean {
   const a = productFamily(currentName);
   const b = productFamily(cardName);
-  if (!a) return true; // sem família detectada → não bloquear
-  return a === b;
+  if (!a || !b) return true;
+  if (a === b) return true;
+  return PHONE_FAMILIES.has(a) && PHONE_FAMILIES.has(b);
 }
 
 function sameCategory(current: Product, card: DiscoveryCard): boolean {
@@ -60,11 +63,14 @@ function sameCategory(current: Product, card: DiscoveryCard): boolean {
   const curName = current.name || "";
   const cardName = card.name || "";
 
-  if (!sameFamily(curName, cardName)) return false;
+  if (ABSURD_RE.test(fold(cardName))) return false;
 
   if (curLeaf && cardLeaf) {
-    return curLeaf === cardLeaf;
+    if (curLeaf !== cardLeaf) return false;
+    return sameFamily(curName, cardName);
   }
+
+  if (!sameFamily(curName, cardName)) return false;
 
   if (curLeaf && !cardLeaf) {
     return false;

@@ -462,6 +462,15 @@ export type ApiProductDetail = {
   knowledgeCompleteness?: number | null;
   /** FASE 7.16 — opcional */
   insights?: Record<string, unknown> | null;
+  /** Canónico — BUY | WAIT | UNKNOWN (Hub ConsumerDecision engine) */
+  consumerDecision?: {
+    verdict: "BUY" | "WAIT" | "UNKNOWN";
+    confidence: number;
+    reason: string;
+    evidence: Record<string, unknown>;
+    policy_version: string;
+  } | null;
+  readModel?: Record<string, unknown> | null;
   recommendation?: string | null;
   recommendationConfidence?: number | null;
   recommendations?: Product["recommendations"];
@@ -903,6 +912,18 @@ export function detailToProduct(d: ApiProductDetail): Product {
           : undefined,
     insights: d.insights
       ? (d.insights as NonNullable<Product["insights"]>)
+      : undefined,
+    consumerDecision: d.consumerDecision
+      ? {
+          verdict: d.consumerDecision.verdict,
+          confidence: Number(d.consumerDecision.confidence) || 0,
+          reason: String(d.consumerDecision.reason || ""),
+          evidence: d.consumerDecision.evidence ?? undefined,
+          policy_version: d.consumerDecision.policy_version ?? undefined,
+        }
+      : undefined,
+    readModel: d.readModel
+      ? (d.readModel as NonNullable<Product["readModel"]>)
       : undefined,
     recommendation: d.recommendation ?? undefined,
     recommendationConfidence:
@@ -1451,15 +1472,6 @@ export async function getCategoryStats(
   return apiGet(
     `/api/v1/categorias/${encodeURIComponent(slug)}/estatisticas`,
   );
-}
-
-export async function getMercadoRankings(limit = 10): Promise<{
-  cheapest: MarketplaceProductCard[];
-  biggestDiscount: MarketplaceProductCard[];
-  mostStores: MarketplaceProductCard[];
-  newest: MarketplaceProductCard[];
-}> {
-  return apiGet(`/api/v1/mercado/rankings?limit=${limit}`);
 }
 
 export async function getMercadoTendencias(

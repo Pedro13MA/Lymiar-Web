@@ -172,7 +172,7 @@ describe("UI: login / loading / menu", () => {
     );
     render(
       <AuthProvider>
-        <LoginButtons />
+        <LoginButtons providers={[...AUTH_PROVIDER_IDS]} />
       </AuthProvider>,
     );
     await waitFor(() => {

@@ -1,10 +1,12 @@
 /**
  * FASE 7.16 — Product Insights (cliente).
  * Interpretação factual dos dados já carregados. Sem IA / sem previsões.
- * Prefere `product.insights` da API; fallback local com as mesmas regras.
+ * Prefere `product.insights` da API; fallback local só sem Hub (legado Fase 8).
+ * Veredicto comprador: sempre `product.consumerDecision` da API.
  */
 
 import type { Product } from "@/lib/types";
+import { resolveConsumerInsightLabel } from "@/lib/consumer-decision";
 
 export type InsightRecommendation =
   | "BUY_NOW"
@@ -98,6 +100,7 @@ function cvPct(prices: number[]): number | null {
 }
 
 /** Computação local (espelha hub) — só dados do produto. */
+/** @deprecated Fase 8 — usar API `insights` + `consumerDecision`; fallback offline only */
 export function computeProductInsights(product: Product): ProductInsights {
   const history = [...(product.history || [])]
     .filter((h) => h.price > 0)
@@ -488,6 +491,8 @@ export function recommendationShortLabel(
 
 /** Rótulo curto para projetos / cart (factual). */
 export function priceInsightShort(product: Product): string {
+  const fromConsumer = resolveConsumerInsightLabel(product);
+  if (fromConsumer) return fromConsumer;
   const i = resolveProductInsights(product);
   if (i.recommendation === "INSUFFICIENT_DATA") return "Poucos dados";
   if (

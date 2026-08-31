@@ -9,6 +9,7 @@ vi.mock("next/navigation", () => ({
 describe("SearchEmptyState", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv("NEXT_PUBLIC_P33_SEARCH_ENGINE", "1");
   });
 
   it("shows query and related links", () => {
