@@ -6,8 +6,9 @@ import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { CommandPalette } from "@/components/admin/shared/CommandPalette";
 import { useAdminSidebar, useCommandPalette } from "@/hooks/admin/useAdminShell";
-import { ADMIN_NAV, getDashboardFixture } from "@/services/admin/navigation";
+import { ADMIN_NAV } from "@/services/admin/navigation";
 import { ADMIN_CSS } from "@/components/admin/admin-tokens";
+import { useAdminLiveAlerts } from "@/hooks/admin/useAdminLiveMetrics";
 
 type Props = {
   children: React.ReactNode;
@@ -27,7 +28,7 @@ export function AdminShell({ children }: Props) {
   const sidebar = useAdminSidebar();
   const palette = useCommandPalette();
   const breadcrumb = useMemo(() => breadcrumbFor(pathname), [pathname]);
-  const notifications = getDashboardFixture().alerts;
+  const notifications = useAdminLiveAlerts();
 
   return (
     <div className="admin-shell">

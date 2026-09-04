@@ -83,6 +83,20 @@ export async function markNotificationsRead(
   });
 }
 
+export async function deleteNotifications(
+  ids: string[],
+  opts?: { all?: boolean },
+): Promise<number> {
+  const data = await req<{ deleted: number }>("/api/v1/notifications/delete", {
+    method: "POST",
+    body: {
+      ids,
+      all: opts?.all ?? false,
+    },
+  });
+  return data.deleted ?? 0;
+}
+
 export async function fetchNotificationPreferences(): Promise<NotificationPreferences> {
   const data = await req<{ preferences: NotificationPreferences }>(
     "/api/v1/notifications/preferences",

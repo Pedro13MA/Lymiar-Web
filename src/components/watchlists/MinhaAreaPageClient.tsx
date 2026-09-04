@@ -1,7 +1,8 @@
 "use client";
 
 /**
- * FASE 7.19 / 8.0 — /minha-area dashboard (protegida + guest CTA).
+ * Minha Área — dashboard da conta (favoritos, alertas email, projetos, notificações).
+ * Sem carrinho: o Lymiar não vende; acompanha preços e avisa.
  */
 
 import { useEffect, useState } from "react";
@@ -16,43 +17,53 @@ import {
   type WatchItem,
   type WatchStats,
 } from "@/lib/watchlists";
-import { getAlerts, getFavorites, loadUserSpace } from "@/lib/user-space";
+import { getAlerts, getFavorites } from "@/lib/user-space";
 import { listProjects } from "@/lib/projects";
-import { cartItemCount, subscribeSmartCart } from "@/lib/smart-cart";
-import { formatEUR } from "@/lib/utils";
 import { useSession } from "@/components/auth/SessionProvider";
 import { LoadingAuth } from "@/components/auth/LoadingAuth";
-import { SyncStatusCard } from "@/components/sync/SyncUI";
 import { isAdminRole } from "@/lib/auth/roles";
+import { fetchUnreadCount } from "@/lib/notifications/api";
+import "@/components/home/premium/home-premium.css";
+import "@/components/catalogo/catalog-premium.css";
+import "@/components/auth/account.css";
 
 type Counts = {
   favorites: number;
   alerts: number;
-  lists: number;
   projects: number;
-  cartItems: number;
+  unread: number;
 };
 
-function StatLink({
+function accountAgeLabel(createdAt: string | null | undefined): string {
+  if (!createdAt) return "—";
+  const created = new Date(createdAt).getTime();
+  if (Number.isNaN(created)) return "—";
+  const days = Math.max(0, Math.floor((Date.now() - created) / 86_400_000));
+  if (days < 1) return "Desde hoje";
+  if (days === 1) return "Há 1 dia";
+  if (days < 30) return `Há ${days} dias`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return months === 1 ? "Há 1 mês" : `Há ${months} meses`;
+  const years = Math.floor(months / 12);
+  return years === 1 ? "Há 1 ano" : `Há ${years} anos`;
+}
+
+function StatCard({
   href,
   label,
   value,
+  hint,
 }: {
   href: string;
   label: string;
   value: string | number;
+  hint?: string;
 }) {
   return (
-    <Link
-      href={href}
-      className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:border-sky-200 hover:bg-sky-50/40"
-    >
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-        {label}
-      </p>
-      <p className="mt-1 font-display text-2xl font-bold text-slate-900">
-        {value}
-      </p>
+    <Link href={href} className="account-stat catalog-card">
+      <p className="account-stat-label">{label}</p>
+      <p className="account-stat-value font-display">{value}</p>
+      {hint ? <p className="account-stat-hint">{hint}</p> : null}
     </Link>
   );
 }
@@ -60,24 +71,24 @@ function StatLink({
 function GuestMinhaArea() {
   return (
     <main className="mx-auto max-w-lg space-y-6 px-4 py-16 text-center sm:px-6">
-      <h1 className="font-display text-3xl font-bold text-slate-900">
+      <h1 className="font-display text-3xl font-bold text-[var(--hm-ink)]">
         Minha Área
       </h1>
-      <p className="text-sm leading-relaxed text-slate-500">
-        Entra para acederes ao teu perfil, favoritos, alertas, projetos, carrinho
-        e timeline. Com conta, os dados sincronizam entre dispositivos.
+      <p className="text-sm leading-relaxed text-[var(--hm-muted)]">
+        Entra com Google para guardar favoritos, criar alertas de preço por
+        email e organizar projetos — sincronizado entre dispositivos.
       </p>
-      <ul className="space-y-2 text-left text-sm text-slate-600">
-        <li>· Guardar favoritos e listas</li>
-        <li>· Gerir alertas de preço</li>
-        <li>· Projetos e carrinho inteligente</li>
-        <li>· Timeline do que segues</li>
+      <ul className="space-y-2 text-left text-sm text-[var(--hm-muted)]">
+        <li>· Favoritos — produtos que queres acompanhar</li>
+        <li>· Alertas — email quando o preço chega ao teu alvo</li>
+        <li>· Projetos — builds e listas de compra</li>
+        <li>· Notificações — o que mudou desde a última visita</li>
       </ul>
       <Link
         href="/entrar/"
-        className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-slate-900 px-6 text-base font-medium text-white shadow-sm hover:bg-slate-800 sm:w-auto"
+        className="catalog-cta inline-flex min-h-12 w-full items-center justify-center rounded-xl px-6 text-base font-medium sm:w-auto"
       >
-        Entrar
+        Continuar com Google
       </Link>
     </main>
   );
@@ -89,30 +100,26 @@ function AuthenticatedMinhaArea() {
   const [counts, setCounts] = useState<Counts>({
     favorites: 0,
     alerts: 0,
-    lists: 0,
     projects: 0,
-    cartItems: 0,
+    unread: 0,
   });
   const [stats, setStats] = useState<WatchStats | null>(null);
   const [watches, setWatches] = useState<WatchItem[]>([]);
 
   const reload = async () => {
-    const [space, favs, alerts, projects, cart, wstats, wlist] =
-      await Promise.all([
-        loadUserSpace(),
-        getFavorites(),
-        getAlerts(),
-        listProjects(),
-        cartItemCount(),
-        getWatchStats(),
-        listWatches(true),
-      ]);
+    const [favs, alerts, projects, unread, wstats, wlist] = await Promise.all([
+      getFavorites(),
+      getAlerts(),
+      listProjects(),
+      fetchUnreadCount().catch(() => 0),
+      getWatchStats(),
+      listWatches(true),
+    ]);
     setCounts({
       favorites: favs.length,
       alerts: alerts.filter((a) => a.active !== false).length,
-      lists: space.lists?.length ?? 0,
       projects: projects.length,
-      cartItems: cart,
+      unread,
     });
     setStats(wstats);
     setWatches(wlist);
@@ -123,139 +130,198 @@ function AuthenticatedMinhaArea() {
     const u1 = subscribeWatchlists(() => {
       void reload();
     });
-    const u2 = subscribeSmartCart(() => {
-      void cartItemCount().then((n) =>
-        setCounts((c) => ({ ...c, cartItems: n })),
-      );
-    });
     return () => {
       u1();
-      u2();
     };
   }, []);
 
+  const initial = (user?.name || user?.email || "?").slice(0, 1).toUpperCase();
+
   return (
-    <main className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6">
-      <div>
-        <h1 className="font-display text-3xl font-bold text-slate-900">
-          Minha Área
-        </h1>
-        <p className="mt-2 text-sm text-slate-500">
-          Favoritos, alertas, projetos, carrinho e timeline — sincronizados na
-          cloud quando estás autenticado.
-        </p>
-      </div>
+    <main className="account-shell mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-6">
+      <header className="account-hero catalog-panel">
+        <div className="flex flex-wrap items-center gap-4">
+          {user?.image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={user.image}
+              alt=""
+              className="h-16 w-16 rounded-2xl object-cover ring-1 ring-[var(--hm-line)]"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <div
+              className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--hm-bg-soft)] text-xl font-semibold text-[var(--hm-ink)]"
+              aria-hidden
+            >
+              {initial}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="catalog-kicker">A tua conta</p>
+            <h1 className="font-display text-2xl font-bold tracking-tight text-[var(--hm-ink)] sm:text-3xl">
+              {user?.name || "Conta Lymiar"}
+            </h1>
+            <p className="mt-1 truncate text-sm text-[var(--hm-muted)]">
+              {user?.email}
+              {" · "}
+              {accountAgeLabel(user?.createdAt)}
+            </p>
+          </div>
+          <Link
+            href="/perfil/"
+            className="inline-flex min-h-11 items-center rounded-xl border border-[var(--hm-line)] bg-white px-4 text-sm font-medium text-[var(--hm-ink)] hover:border-[var(--hm-brand)]"
+          >
+            Gerir perfil
+          </Link>
+        </div>
+      </header>
 
-      <SyncStatusCard />
+      {counts.unread > 0 ? (
+        <Link
+          href="/notificacoes/"
+          className="account-inbox catalog-panel flex items-center justify-between gap-3"
+        >
+          <div>
+            <p className="font-display text-lg font-semibold text-[var(--hm-ink)]">
+              {counts.unread === 1
+                ? "1 novidade desde a última visita"
+                : `${counts.unread} novidades desde a última visita`}
+            </p>
+            <p className="mt-1 text-sm text-[var(--hm-muted)]">
+              Abre as notificações para ver o que mudou nos produtos que segues.
+            </p>
+          </div>
+          <span className="account-inbox-badge">{counts.unread}</span>
+        </Link>
+      ) : null}
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <StatLink href="/perfil/" label="Perfil" value="→" />
-        <StatLink href="/notificacoes/" label="Notificações" value="→" />
-        <StatLink href="/favoritos/" label="Favoritos" value={counts.favorites} />
-        <StatLink href="/alertas/" label="Alertas" value={counts.alerts} />
-        <StatLink href="/projetos/" label="Projetos" value={counts.projects} />
-        <StatLink href="/carrinho/" label="Carrinho" value={counts.cartItems} />
-        <StatLink
-          href="/timeline/"
-          label="Timeline"
-          value={stats?.eventsThisWeek ?? 0}
-        />
-        {showControlCenter ? (
-          <StatLink href="/control-center/" label="🛠 Control Center" value="→" />
-        ) : null}
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="font-display text-xl font-bold text-slate-900">
-          Watchlists
+      <section aria-labelledby="account-stats-title">
+        <h2
+          id="account-stats-title"
+          className="mb-3 font-display text-lg font-bold text-[var(--hm-ink)]"
+        >
+          Resumo
         </h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
-            <p className="text-xs text-slate-400">Produtos</p>
-            <p className="font-display text-xl font-bold">
-              {stats?.products ?? 0}
-            </p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
-            <p className="text-xs text-slate-400">Categorias</p>
-            <p className="font-display text-xl font-bold">
-              {stats?.categories ?? 0}
-            </p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
-            <p className="text-xs text-slate-400">Marcas / Lojas</p>
-            <p className="font-display text-xl font-bold">
-              {(stats?.brands ?? 0) + (stats?.stores ?? 0)}
-            </p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
-            <p className="text-xs text-slate-400">Preço total acompanhado</p>
-            <p className="font-display text-xl font-bold">
-              {stats ? formatEUR(stats.followedValueEur) : "—"}
-            </p>
-          </div>
+          <StatCard
+            href="/favoritos/"
+            label="Favoritos"
+            value={counts.favorites}
+            hint="Produtos que segues"
+          />
+          <StatCard
+            href="/alertas/"
+            label="Alertas"
+            value={counts.alerts}
+            hint="Email quando o preço cai"
+          />
+          <StatCard
+            href="/projetos/"
+            label="Projetos"
+            value={counts.projects}
+            hint="Builds e listas"
+          />
+          <StatCard
+            href="/notificacoes/"
+            label="Por ler"
+            value={counts.unread}
+            hint="Notificações"
+          />
         </div>
-        <p className="text-sm text-slate-500">
-          Eventos esta semana:{" "}
-          <span className="font-medium text-slate-800">
-            {stats?.eventsThisWeek ?? 0}
-          </span>
-          {" · "}
-          Projetos seguidos: {stats?.projects ?? 0}
-          {" · "}
-          Carrinho: {stats?.smartCarts ?? 0}
-        </p>
+      </section>
+
+      <section className="grid gap-3 sm:grid-cols-2">
+        <div className="catalog-panel space-y-2 p-5">
+          <h2 className="font-display text-base font-bold text-[var(--hm-ink)]">
+            Favoritos
+          </h2>
+          <p className="text-sm leading-relaxed text-[var(--hm-muted)]">
+            Guarda produtos no perfil para os acompanhar. Não é uma compra —
+            é o que te interessa no catálogo.
+          </p>
+          <Link
+            href="/favoritos/"
+            className="inline-flex text-sm font-medium text-[var(--hm-brand-deep)] hover:underline"
+          >
+            Ver favoritos →
+          </Link>
+        </div>
+        <div className="catalog-panel space-y-2 p-5">
+          <h2 className="font-display text-base font-bold text-[var(--hm-ink)]">
+            Alertas por email
+          </h2>
+          <p className="text-sm leading-relaxed text-[var(--hm-muted)]">
+            Define um preço-alvo ou um desconto que valha a pena. Quando o
+            catálogo observar essa condição, avisamos no teu email Google.
+          </p>
+          <Link
+            href="/alertas/"
+            className="inline-flex text-sm font-medium text-[var(--hm-brand-deep)] hover:underline"
+          >
+            Gerir alertas →
+          </Link>
+        </div>
       </section>
 
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="font-display text-xl font-bold text-slate-900">
+          <h2 className="font-display text-lg font-bold text-[var(--hm-ink)]">
             A seguir
           </h2>
           <Link
             href="/timeline/"
-            className="text-sm font-medium text-sky-700 hover:underline"
+            className="text-sm font-medium text-[var(--hm-brand-deep)] hover:underline"
           >
-            Ver timeline
+            Timeline
           </Link>
         </div>
         {!watches.length ? (
-          <p className="rounded-xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500">
-            Ainda não segue nada. Use o botão Seguir nas páginas de produto,
-            categoria, marca, loja, projeto ou carrinho.
+          <p className="rounded-xl border border-dashed border-[var(--hm-line)] px-4 py-6 text-sm text-[var(--hm-muted)]">
+            Ainda não segues nada. Usa «Seguir» nas páginas de produto, marca ou
+            loja.
           </p>
         ) : (
-          <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
-            {watches.map((w) => (
+          <ul className="divide-y divide-[var(--hm-line)] overflow-hidden rounded-xl border border-[var(--hm-line)] bg-white">
+            {watches.slice(0, 8).map((w) => (
               <li
-                key={w.id}
-                className="flex flex-wrap items-center justify-between gap-2 px-4 py-3"
+                key={`${w.kind}:${w.targetKey}`}
+                className="flex items-center justify-between gap-3 px-4 py-3"
               >
-                <div>
-                  <p className="text-xs text-slate-400">
-                    {WATCH_KIND_LABEL[w.kind]}
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-[var(--hm-ink)]">
+                    {w.label || w.targetKey}
                   </p>
-                  <Link
-                    href={w.target.href}
-                    className="font-medium text-slate-900 hover:text-sky-800 hover:underline"
-                  >
-                    {w.target.label}
-                  </Link>
+                  <p className="text-xs text-[var(--hm-faint)]">
+                    {WATCH_KIND_LABEL[w.kind] || w.kind}
+                  </p>
                 </div>
                 <button
                   type="button"
-                  className="text-xs font-medium text-slate-500 hover:text-slate-800"
-                  onClick={() =>
-                    void unfollow(w.kind, w.target.key).then(reload)
-                  }
+                  className="shrink-0 text-xs font-medium text-[var(--hm-muted)] hover:text-[var(--hm-ink)]"
+                  onClick={() => void unfollow(w.kind, w.targetKey).then(reload)}
                 >
-                  Deixar de seguir
+                  Deixar
                 </button>
               </li>
             ))}
           </ul>
         )}
+        {stats ? (
+          <p className="text-xs text-[var(--hm-faint)]">
+            Eventos esta semana: {stats.eventsThisWeek}
+          </p>
+        ) : null}
       </section>
+
+      {showControlCenter ? (
+        <Link
+          href="/control-center/"
+          className="inline-flex text-sm font-medium text-[var(--hm-ink)] hover:underline"
+        >
+          Control Center →
+        </Link>
+      ) : null}
     </main>
   );
 }
@@ -264,16 +330,16 @@ export function MinhaAreaPageClient() {
   const { status } = useSession();
 
   return (
-    <>
+    <div className="home-premium min-h-screen">
       <SiteHeader />
       {status === "loading" ? (
         <LoadingAuth />
-      ) : status === "authenticated" ? (
-        <AuthenticatedMinhaArea />
-      ) : (
+      ) : status !== "authenticated" ? (
         <GuestMinhaArea />
+      ) : (
+        <AuthenticatedMinhaArea />
       )}
       <SiteFooter />
-    </>
+    </div>
   );
 }

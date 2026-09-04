@@ -8,6 +8,7 @@ import {
   type MarketplaceProductCard,
 } from "@/lib/api";
 import { MarketProductCard, MarketStat } from "@/components/mercado/MarketCards";
+import { WifiLoaderBlock } from "@/components/ui/WifiLoader";
 import { formatEUR } from "@/lib/utils";
 
 function RankBlock({
@@ -87,7 +88,7 @@ export function MercadoDashboardClient() {
       ) : null}
 
       {!data && !error ? (
-        <p className="text-sm text-slate-400">A carregar…</p>
+        <WifiLoaderBlock text="A carregar" />
       ) : null}
 
       {data ? (

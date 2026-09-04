@@ -8,6 +8,7 @@ import {
   deleteProject,
   duplicateProject,
   listProjects,
+  reinsertProject,
   restoreProject,
   subscribeProjects,
 } from "@/lib/projects";
@@ -18,8 +19,10 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { CloudSyncedBadge } from "@/components/sync/SyncUI";
 import { Button } from "@/components/ui/button";
 import { ProjectWizard } from "@/components/projects/ProjectWizard";
+import { useSnackbar } from "@/components/user-space/Snackbar";
 
 export function ProjectsPageClient() {
+  const { push } = useSnackbar();
   const [projects, setProjects] = useState<Project[]>([]);
   const [archived, setArchived] = useState<Project[]>([]);
   const [wizard, setWizard] = useState(false);
@@ -37,6 +40,20 @@ export function ProjectsPageClient() {
       void reload();
     });
   }, [reload]);
+
+  const remove = async (project: Project) => {
+    const snapshot = JSON.parse(JSON.stringify(project)) as Project;
+    await deleteProject(project.id);
+    await reload();
+    push("Projeto eliminado.", {
+      action: {
+        label: "Anular",
+        onClick: () => {
+          void reinsertProject(snapshot).then(reload);
+        },
+      },
+    });
+  };
 
   return (
     <>
@@ -137,9 +154,7 @@ export function ProjectsPageClient() {
                       type="button"
                       className="text-xs text-slate-500 hover:underline"
                       onClick={() => {
-                        if (window.confirm("Eliminar este projeto?")) {
-                          void deleteProject(p.id).then(reload);
-                        }
+                        void remove(p);
                       }}
                     >
                       Eliminar
@@ -183,7 +198,7 @@ export function ProjectsPageClient() {
                         type="button"
                         className="text-slate-500 hover:underline"
                         onClick={() => {
-                          void deleteProject(p.id).then(reload);
+                          void remove(p);
                         }}
                       >
                         Eliminar

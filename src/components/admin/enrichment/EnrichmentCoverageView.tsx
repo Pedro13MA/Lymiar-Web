@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Loader2, RefreshCw } from "lucide-react";
+import Link from "next/link";
 import { PageHeader, LoadingState, EmptyState } from "@/components/admin/shared";
 import {
   fetchEnrichmentCoverage,
@@ -186,7 +187,12 @@ export function EnrichmentCoverageView() {
                     <ul className="mt-3 space-y-2 text-sm text-[var(--admin-muted)]">
                       {r.samples.map((s) => (
                         <li key={s.ean} className="border-t border-[var(--admin-border)] pt-2 first:border-0 first:pt-0">
-                          <span className="font-mono text-xs text-[var(--admin-faint)]">{s.ean}</span>
+                          <Link
+                            href={`/control-center/produtos/?ean=${encodeURIComponent(s.ean)}`}
+                            className="font-mono text-xs text-[var(--admin-brand)] hover:underline"
+                          >
+                            {s.ean}
+                          </Link>
                           <div className="text-[var(--admin-text)]">{s.name}</div>
                         </li>
                       ))}

@@ -13,6 +13,7 @@ import {
 import { isAbortError } from "@/lib/api-client";
 import { isP33SearchEnabled } from "@/lib/search/flags";
 import { cn, formatEUR } from "@/lib/utils";
+import { WifiLoader } from "@/components/ui/WifiLoader";
 
 type Props = {
   className?: string;
@@ -171,7 +172,9 @@ export function SearchTypeahead({
           role="listbox"
         >
           {loading ? (
-            <p className="px-4 py-3 text-sm text-slate-500">A procurar…</p>
+            <div className="wifi-loader-block wifi-loader-block--compact">
+              <WifiLoader text="A procurar" size="sm" />
+            </div>
           ) : p33 && suggest ? (
             <SuggestGroups
               suggest={suggest}

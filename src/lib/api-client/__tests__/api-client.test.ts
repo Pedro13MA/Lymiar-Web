@@ -37,10 +37,10 @@ describe("ttl cache", () => {
 });
 
 describe("endpoint config", () => {
-  it("search has no cache and no dedupe", () => {
+  it("search usa cache curto e dedupe", () => {
     const cfg = resolveEndpointConfig("/api/v1/search?q=ssd");
-    expect(cfg.cacheTtlMs).toBe(0);
-    expect(cfg.dedupe).toBe(false);
+    expect(cfg.cacheTtlMs).toBe(45_000);
+    expect(cfg.dedupe).toBe(true);
   });
 
   it("taxonomy has cache TTL", () => {

@@ -18,7 +18,7 @@ const TABS = [
   },
   {
     href: "/notificacoes/",
-    label: "Alertas",
+    label: "Avisos",
     match: (p: string) =>
       p.startsWith("/notificacoes") || p.startsWith("/alertas"),
   },
@@ -48,9 +48,9 @@ export function BottomNavigation() {
               <Link
                 href={tab.href}
                 className={cn(
-                  "flex flex-col items-center gap-0.5 px-1 py-2 text-[11px]",
+                  "flex min-h-11 flex-col items-center justify-center gap-0.5 px-1 py-2 text-[11px] touch-manipulation",
                   active
-                    ? "font-semibold text-sky-700"
+                    ? "font-semibold text-slate-900"
                     : "text-slate-500 hover:text-slate-800",
                 )}
                 aria-current={active ? "page" : undefined}
@@ -58,7 +58,7 @@ export function BottomNavigation() {
                 <span
                   className={cn(
                     "h-1 w-1 rounded-full",
-                    active ? "bg-sky-600" : "bg-transparent",
+                    active ? "bg-[var(--hm-brand,#ff6a1a)]" : "bg-transparent",
                   )}
                   aria-hidden
                 />

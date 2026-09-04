@@ -56,7 +56,7 @@ function verdictTone(sem: DecisionSemaphore | undefined): "buy" | "wait" | "unkn
 
 function verdictBadge(tone: "buy" | "wait" | "unknown"): string {
   if (tone === "buy") return "Vale a pena comprar";
-  if (tone === "wait") return "Espera mais um pouco";
+  if (tone === "wait") return "Melhor esperar";
   return "Ainda não sabemos";
 }
 

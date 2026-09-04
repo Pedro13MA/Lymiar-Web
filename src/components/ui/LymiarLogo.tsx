@@ -15,6 +15,15 @@ export const LYMIAR_LOGO = {
   legacy: "/brand/lymiar-logotipo.png",
 } as const;
 
+/** Variantes dark (transparentes, invertidas via CSS em dkmode). */
+export const LYMIAR_LOGO_DARK = {
+  primary: "/brand/lymiar-logo-primary-dark.png",
+  square: "/brand/lymiar-logo-square-dark.png",
+  horizontal: "/brand/lymiar-logo-horizontal-dark.png",
+  mark: "/brand/lymiar-mark-dark.png",
+  legacy: "/brand/lymiar-logo-primary-dark.png",
+} as const;
+
 export type LymiarLogoVariant = keyof typeof LYMIAR_LOGO;
 
 /** @deprecated prefer LYMIAR_LOGO.primary / .horizontal */
@@ -23,8 +32,7 @@ export const LYMIAR_LOGO_SRC = LYMIAR_LOGO.legacy;
 type Props = {
   className?: string;
   /**
-   * Altura em px CSS. Em `horizontal` a largura segue o aspect ratio (~2.5:1).
-   * Em variantes quadradas/verticais usa-se um lado igual a `size`.
+   * Altura em px CSS. A largura segue o aspect ratio do ficheiro recortado.
    */
   size?: number;
   /** Default `horizontal` — cabeçalho / navbar. */
@@ -34,11 +42,12 @@ type Props = {
   alt?: string;
 };
 
+/** width/height após crop ao conteúdo (sem padding transparente). */
 const ASPECT: Record<LymiarLogoVariant, number> = {
-  primary: 1219 / 1516,
-  square: 1429 / 1382,
-  horizontal: 1693 / 820,
-  mark: 664 / 944,
+  primary: 810 / 1048,
+  square: 923 / 884,
+  horizontal: 1170 / 470,
+  mark: 429 / 653,
   legacy: 1219 / 1516,
 };
 
@@ -53,29 +62,34 @@ export function LymiarLogo({
   alt = "",
 }: Props) {
   const src = LYMIAR_LOGO[variant];
-  const ratio = ASPECT[variant];
-  const isHorizontal = variant === "horizontal";
+  const srcDark = LYMIAR_LOGO_DARK[variant];
+  const aspect = ASPECT[variant];
   const height = size;
-  const width = isHorizontal ? Math.round(size * ratio) : size;
+  const width = Math.round(size * aspect);
+  const imgStyle = { width, height };
 
   return (
-    <Image
-      src={src}
-      alt={alt}
-      width={width}
-      height={height}
-      priority={priority}
-      className={cn(
-        "object-contain",
-        isHorizontal ? "h-auto w-auto" : "rounded-lg",
-        className,
-      )}
-      style={
-        isHorizontal
-          ? { height: size, width: "auto", maxHeight: size }
-          : undefined
-      }
-      aria-hidden={alt ? undefined : true}
-    />
+    <span className="inline-flex">
+      <Image
+        src={src}
+        alt={alt}
+        width={width}
+        height={height}
+        priority={priority}
+        className={cn("object-contain lymiar-logo-normal", className)}
+        style={imgStyle}
+        aria-hidden={alt ? undefined : true}
+      />
+      <Image
+        src={srcDark}
+        alt={alt}
+        width={width}
+        height={height}
+        priority={priority}
+        className={cn("object-contain lymiar-logo-dark", className)}
+        style={imgStyle}
+        aria-hidden={true}
+      />
+    </span>
   );
 }

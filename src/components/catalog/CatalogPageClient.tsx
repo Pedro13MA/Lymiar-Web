@@ -10,6 +10,7 @@ import { CatalogSidebar } from "@/components/catalog/CatalogSidebar";
 import { OpportunityCard } from "@/components/product/OpportunityCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { WifiLoaderBlock } from "@/components/ui/WifiLoader";
 import {
   getCategory,
   getCategoryProducts,
@@ -44,13 +45,13 @@ import { cn, formatEUR } from "@/lib/utils";
 
 const PAGE_SIZE = 24;
 
-export type CatalogSection = "deals" | "overpriced" | "drops" | "telegram" | "";
+export type CatalogSection = "deals" | "overpriced" | "";
 type CatalogTab = "products" | "alerts";
 type CatalogSort = "discount_desc" | "lymiar_desc" | "price_asc";
 
 const SORT_OPTIONS: { value: CatalogSort; label: string; api?: SearchSortBy }[] = [
   { value: "discount_desc", label: "Maior Desconto", api: "discount_desc" },
-  { value: "lymiar_desc", label: "Score Lymiar", api: "lymiar_desc" },
+  { value: "lymiar_desc", label: "Melhor decisão", api: "lymiar_desc" },
   { value: "price_asc", label: "Menor Preço", api: "price_asc" },
 ];
 
@@ -65,14 +66,6 @@ const SECTION_META: Record<
   overpriced: {
     title: "Vale a Pena Esperar",
     subtitle: "Produtos atualmente acima do valor habitual de mercado.",
-  },
-  drops: {
-    title: "Maiores Quedas",
-    subtitle: "Maiores descidas de preço face a ontem.",
-  },
-  telegram: {
-    title: "Últimas oportunidades detetadas",
-    subtitle: "Produtos enviados automaticamente para o canal Telegram do Lymiar.",
   },
 };
 
@@ -130,12 +123,7 @@ function sortProducts(products: Product[], sort: CatalogSort): Product[] {
 function readCatalogState(params: URLSearchParams) {
   const sectionRaw = (params.get("section") || "").trim().toLowerCase();
   const section: CatalogSection =
-    sectionRaw === "deals" ||
-    sectionRaw === "overpriced" ||
-    sectionRaw === "drops" ||
-    sectionRaw === "telegram"
-      ? sectionRaw
-      : "";
+    sectionRaw === "deals" || sectionRaw === "overpriced" ? sectionRaw : "";
 
   const rawCat = (params.get("cat") || params.get("category") || "").trim();
   const cat = LEGACY_CATALOG_CATEGORY[rawCat] || rawCat;
@@ -324,28 +312,6 @@ export function CatalogPageClient() {
           const res = await getDealsWait(50);
           if (cancelled) return;
           setPool(res.results.map(summaryToProduct));
-        } else if (state.section === "drops") {
-          const [nowRes, waitRes] = await Promise.all([
-            getDealsNow(50),
-            getDealsWait(50),
-          ]);
-          if (cancelled) return;
-          setPool(
-            dedupeByEan([
-              ...nowRes.results.map(summaryToProduct),
-              ...waitRes.results.map(summaryToProduct),
-            ])
-              .filter((p) => (p.dropTodayPct ?? 0) > 0)
-              .sort((a, b) => (b.dropTodayPct ?? 0) - (a.dropTodayPct ?? 0)),
-          );
-        } else if (state.section === "telegram") {
-          const res = await getTelegramDeals(50, 168);
-          if (cancelled) return;
-          setPool(
-            res.results
-              .filter((s) => s.sentToTelegram !== false)
-              .map(summaryToProduct),
-          );
         } else {
           const [nowRes, waitRes] = await Promise.all([
             getDealsNow(50),
@@ -834,14 +800,7 @@ export function CatalogPageClient() {
 
         <section>
           {loading ? (
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="h-72 animate-pulse rounded-xl border border-slate-200/80 bg-slate-100"
-                />
-              ))}
-            </div>
+            <WifiLoaderBlock text="A carregar" />
           ) : pageItems.length ? (
             state.tab === "alerts" ? (
               <div className="space-y-3">
@@ -856,10 +815,9 @@ export function CatalogPageClient() {
                         {product.name}
                       </p>
                       <p className="mt-0.5 text-xs text-sky-700">
-                        Índice {product.decision.lymiarIndex.value}/100
                         {product.decision.isHistoricalMin
-                          ? " · Mín. histórico"
-                          : ""}
+                          ? "Mínimo histórico observado"
+                          : "Alerta enviado ao canal"}
                       </p>
                     </div>
                     <span className="shrink-0 font-display text-lg font-bold text-slate-900">
@@ -874,12 +832,9 @@ export function CatalogPageClient() {
                   <OpportunityCard
                     key={product.ean}
                     product={product}
-                    showDropToday={state.section === "drops"}
                     compact
                     detectedAt={
-                      state.section === "telegram" || state.tab === "alerts"
-                        ? product.detectedAt
-                        : undefined
+                      state.tab === "alerts" ? product.detectedAt : undefined
                     }
                   />
                 ))}

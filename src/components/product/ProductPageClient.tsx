@@ -183,7 +183,7 @@ function buildVerdictCopy(opts: {
     );
   }
   return {
-    title: "Recomendamos esperar",
+    title: "Melhor esperar",
     lines,
   };
 }

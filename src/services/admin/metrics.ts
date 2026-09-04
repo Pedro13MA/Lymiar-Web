@@ -55,10 +55,86 @@ export async function fetchAdminMetrics(
   return res.json() as Promise<AdminMetricsResponse>;
 }
 
+export type MetricsHistoryPoint = {
+  key: string;
+  value: Record<string, unknown> | null;
+  collected_at?: string;
+  collectedAt?: string;
+  cadence?: string;
+};
+
+export async function fetchAdminMetricsHistory(
+  key: string,
+  limit = 60,
+): Promise<{ ok: boolean; key: string; points: MetricsHistoryPoint[] }> {
+  const base = getApiBaseUrl();
+  const res = await fetch(
+    `${base}/api/admin/metrics/history/${encodeURIComponent(key)}?limit=${limit}`,
+    {
+      headers: authHeaders(),
+      credentials: "include",
+      cache: "no-store",
+    },
+  );
+  if (!res.ok) throw new Error(`metrics_history_http_${res.status}`);
+  return res.json();
+}
+
+function historyToChart(
+  points: MetricsHistoryPoint[],
+  valueKey: string = "pct",
+): import("@/types/admin").ChartPoint[] {
+  const ordered = [...points].reverse();
+  return ordered.map((p) => {
+    const v = p.value;
+    let num = 0;
+    if (typeof v?.[valueKey] === "number") num = v[valueKey] as number;
+    else if (typeof v?.count === "number") num = v.count as number;
+    else if (typeof v?.label === "string" && /^[\d.]+$/.test(v.label)) num = Number(v.label);
+    const ts = p.collected_at || p.collectedAt || "";
+    const label = ts
+      ? new Date(ts).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })
+      : "";
+    return { label, value: num };
+  });
+}
+
+export function historyToChartPublic(
+  points: MetricsHistoryPoint[],
+  valueKey: string = "pct",
+): import("@/types/admin").ChartPoint[] {
+  return historyToChart(points, valueKey);
+}
+
+export async function fetchDashboardCharts(): Promise<{
+  products: import("@/types/admin").ChartPoint[];
+  offers: import("@/types/admin").ChartPoint[];
+  visits: import("@/types/admin").ChartPoint[];
+  accounts: import("@/types/admin").ChartPoint[];
+}> {
+  const [stats, feeds, users, rps] = await Promise.all([
+    fetchAdminMetricsHistory("stats_quick", 48).catch(() => ({ points: [] })),
+    fetchAdminMetricsHistory("feeds_quality", 48).catch(() => ({ points: [] })),
+    fetchAdminMetricsHistory("users_online", 48).catch(() => ({ points: [] })),
+    fetchAdminMetricsHistory("requests_per_sec", 48).catch(() => ({ points: [] })),
+  ]);
+  const productPoints = stats.points.map((p) => ({
+    ...p,
+    value:
+      (p.value?.products as Record<string, unknown> | undefined) ??
+      (p.value as Record<string, unknown> | null),
+  }));
+  return {
+    products: historyToChart(productPoints, "count"),
+    offers: historyToChart(feeds.points, "offers"),
+    visits: historyToChart(rps.points, "count"),
+    accounts: historyToChart(users.points, "count"),
+  };
+}
+
 function collectedOf(m: SystemMetricEntry | undefined): string {
   return m?.collected_at || m?.collectedAt || "";
 }
-
 function toneOf(v: Record<string, unknown> | null | undefined): HealthTone {
   const t = String(v?.tone || "neutral");
   if (t === "ok" || t === "warn" || t === "critical" || t === "neutral") return t;
@@ -243,7 +319,8 @@ export function metricsToDashboard(
   const quickMetrics: MetricCardData[] = [
     mapQuick("products", "Produtos", "stats_quick", "stats 5m", productsEntry),
     mapQuick("offers", "Ofertas", "feeds_quality", "feeds 1h"),
-    mapQuick("users", "Online", "users_online", "últimos 60s"),
+    mapQuick("users", "Logados", "users_online", "sessão 60s"),
+    mapQuick("visitors", "Visitantes", "visitors_active", "API 60s"),
     mapQuick("rps", "Requests/s", "requests_per_sec", "tempo real"),
     mapQuick("db", "BD", "db_growth", "crescimento 5m", dbCatalogEntry),
   ];

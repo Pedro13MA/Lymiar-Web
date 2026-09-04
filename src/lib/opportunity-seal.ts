@@ -30,16 +30,16 @@ export function getOpportunitySeal(product: Product): OpportunitySeal {
   if (product.decision.semaphore === "fair") {
     return {
       emoji: "🟡",
-      label: "Preço razoável",
-      className: "border-amber-200 bg-amber-50 text-amber-900",
+      label: "Ainda não sabemos",
+      className: "border-yellow-200 bg-yellow-50 text-yellow-800",
       kind: "fair",
       showHistoricalMin: false,
     };
   }
   return {
-    emoji: "🟡",
+    emoji: "🟠",
     label: "Melhor esperar",
-    className: "border-amber-200 bg-amber-50 text-amber-900",
+    className: "border-orange-200 bg-orange-50 text-orange-800",
     kind: "wait",
     showHistoricalMin: false,
   };

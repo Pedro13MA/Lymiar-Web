@@ -11,6 +11,7 @@ import {
   hasTaxonomyFacets,
   prepareTaxonomyFacets,
   selectionFromSearchParams,
+  selectionFromSearchParamsWithLegacy,
   selectionToSearchParams,
   setBooleanFacet,
   sortFacetValues,
@@ -73,7 +74,7 @@ describe("taxonomy-facets helpers", () => {
     ).toBe(true);
   });
 
-  it("prepareTaxonomyFacets — alphabetical + hide empty", () => {
+  it("prepareTaxonomyFacets — preserves API order + hide empty", () => {
     const prepared = prepareTaxonomyFacets([
       facet("vram_gb", "VRAM", "number", [
         { value: "16", label: "16", count: 3 },
@@ -85,11 +86,10 @@ describe("taxonomy-facets helpers", () => {
       ]),
       facet("empty", "Empty", "enum", []),
     ]);
-    expect(prepared.map((f) => f.id)).toEqual(["brand", "vram_gb"]);
-    // number ordenado numericamente
-    expect(prepared[1].values.map((v) => v.value)).toEqual(["8", "16"]);
+    expect(prepared.map((f) => f.id)).toEqual(["vram_gb", "brand"]);
+    expect(prepared[0].values.map((v) => v.value)).toEqual(["8", "16"]);
     // enum por frequência
-    expect(prepared[0].values.map((v) => v.value)).toEqual(["a", "b"]);
+    expect(prepared[1].values.map((v) => v.value)).toEqual(["a", "b"]);
   });
 
   it("sortFacetValues — number numeric, enum by frequency", () => {
@@ -142,6 +142,13 @@ describe("taxonomy-facets helpers", () => {
       vram_gb: ["16"],
       store: ["worten"],
     });
+  });
+
+  it("legacy min_price/max_price map to price_min/price_max", () => {
+    const params = new URLSearchParams("min_price=100&max_price=500");
+    const sel = selectionFromSearchParamsWithLegacy(params);
+    expect(sel.price_min).toEqual(["100"]);
+    expect(sel.price_max).toEqual(["500"]);
   });
 });
 

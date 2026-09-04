@@ -4,7 +4,7 @@ import { HomeHeroPremium } from "@/components/home/premium/HomeHeroPremium";
 import { HomeDecisionsPremium } from "@/components/home/premium/HomeDecisionsPremium";
 import { HomeDealsProvider } from "@/components/home/premium/HomeDealsProvider";
 import { HomeEssence } from "@/components/home/premium/HomeEssence";
-import { HomeExplorePremium } from "@/components/home/premium/HomeTelegramPremium";
+import { HomeExplorePremium } from "@/components/home/premium/HomeExplorePremium";
 import { HomeCouponsPremium } from "@/components/home/premium/HomeCouponsPremium";
 import { HomeTelegramPremium } from "@/components/home/premium/HomeTelegramPremium";
 import { LazySection } from "@/components/ui/LazySection";

@@ -5,7 +5,9 @@ import Link from "next/link";
 import { SiteFooter, SiteHeader } from "@/components/layout/SiteHeader";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Button } from "@/components/ui/button";
+import { useSnackbar } from "@/components/user-space/Snackbar";
 import {
+  deleteNotifications,
   fetchNotifications,
   groupNotificationsByPeriod,
   markNotificationsRead,
@@ -13,13 +15,24 @@ import {
   type AppNotification,
 } from "@/lib/notifications/api";
 
-type Tab = "all" | "unread" | "read" | "archived";
+type Tab = "all" | "unread" | "read";
+
+function matchesQuery(n: AppNotification, q: string): boolean {
+  const needle = q.trim().toLowerCase();
+  if (!needle) return true;
+  return (
+    n.title.toLowerCase().includes(needle) ||
+    n.body.toLowerCase().includes(needle)
+  );
+}
 
 function NotificationsBody() {
+  const { push } = useSnackbar();
   const [tab, setTab] = useState<Tab>("all");
   const [q, setQ] = useState("");
   const [items, setItems] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -29,23 +42,57 @@ function NotificationsBody() {
           ? { status: "unread" as const }
           : tab === "read"
             ? { status: "read" as const }
-            : tab === "archived"
-              ? { archived: true }
-              : {};
-      const list = await fetchNotifications({ ...params, q: q || undefined });
-      setItems(list);
+            : { archived: false };
+      const list = await fetchNotifications(params);
+      setItems(list.filter((n) => !n.archived));
     } catch {
       setItems([]);
+      push("Não foi possível carregar as notificações.");
     } finally {
       setLoading(false);
     }
-  }, [tab, q]);
+  }, [tab, push]);
 
   useEffect(() => {
     void reload();
   }, [reload]);
 
-  const groups = useMemo(() => groupNotificationsByPeriod(items), [items]);
+  const filtered = useMemo(
+    () => items.filter((n) => matchesQuery(n, q)),
+    [items, q],
+  );
+  const groups = useMemo(
+    () => groupNotificationsByPeriod(filtered),
+    [filtered],
+  );
+
+  const removeOne = async (n: AppNotification) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await deleteNotifications([n.id]);
+      setItems((prev) => prev.filter((x) => x.id !== n.id));
+      push("Notificação apagada.");
+    } catch {
+      push("Não foi possível apagar. Tenta outra vez.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeAll = async () => {
+    if (!items.length || busy) return;
+    setBusy(true);
+    try {
+      await deleteNotifications([], { all: true });
+      setItems([]);
+      push("Todas as notificações foram apagadas.");
+    } catch {
+      push("Não foi possível apagar. Tenta outra vez.");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:px-6">
@@ -55,16 +102,11 @@ function NotificationsBody() {
             Notificações
           </h1>
           <p className="mt-2 text-sm text-slate-500">
-            Apenas alterações observadas — sem previsões.
+            Avisos sobre mudanças que o Lymiar observou — preços, stock, alertas.
+            Sem previsões.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link
-            href="/notificacoes/preferencias/"
-            className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
-          >
-            Preferências
-          </Link>
           <Button
             type="button"
             variant="secondary"
@@ -76,42 +118,56 @@ function NotificationsBody() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {(
-          [
-            ["all", "Recebidas"],
-            ["unread", "Não lidas"],
-            ["read", "Lidas"],
-            ["archived", "Arquivadas"],
-          ] as const
-        ).map(([id, label]) => (
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              ["all", "Recebidas"],
+              ["unread", "Não lidas"],
+              ["read", "Lidas"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setTab(id)}
+              className={
+                tab === id
+                  ? "rounded-xl bg-slate-900 px-3 py-1.5 text-sm text-white"
+                  : "rounded-xl border border-slate-200 px-3 py-1.5 text-sm text-slate-600"
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {items.length ? (
           <button
-            key={id}
             type="button"
-            onClick={() => setTab(id)}
-            className={
-              tab === id
-                ? "rounded-xl bg-slate-900 px-3 py-1.5 text-sm text-white"
-                : "rounded-xl border border-slate-200 px-3 py-1.5 text-sm text-slate-600"
-            }
+            disabled={busy}
+            className="text-sm text-slate-500 underline-offset-2 hover:text-rose-700 hover:underline disabled:opacity-50"
+            onClick={() => void removeAll()}
           >
-            {label}
+            Apagar todas
           </button>
-        ))}
+        ) : null}
       </div>
 
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="Pesquisar…"
+        aria-label="Pesquisar notificações"
         className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
       />
 
       {loading ? (
         <div className="h-40 animate-pulse rounded-2xl bg-slate-100" />
-      ) : !items.length ? (
+      ) : !filtered.length ? (
         <p className="rounded-xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
-          Ainda não há notificações.
+          {q.trim()
+            ? "Nenhuma notificação corresponde à pesquisa."
+            : "Ainda não há notificações."}
         </p>
       ) : (
         <div className="space-y-6">
@@ -142,7 +198,7 @@ function NotificationsBody() {
                           {n.status === "unread" ? " · não lida" : ""}
                         </p>
                       </div>
-                      <div className="flex shrink-0 flex-col gap-1">
+                      <div className="flex shrink-0 flex-col items-end gap-1">
                         {n.status === "unread" ? (
                           <button
                             type="button"
@@ -156,14 +212,11 @@ function NotificationsBody() {
                         ) : null}
                         <button
                           type="button"
-                          className="text-xs text-slate-500"
-                          onClick={() =>
-                            void markNotificationsRead([n.id], {
-                              archive: true,
-                            }).then(reload)
-                          }
+                          disabled={busy}
+                          className="text-xs text-slate-500 hover:text-rose-700 disabled:opacity-50"
+                          onClick={() => void removeOne(n)}
                         >
-                          Arquivar
+                          Apagar
                         </button>
                       </div>
                     </div>

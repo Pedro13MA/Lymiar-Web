@@ -5,10 +5,12 @@
   --hm-brand: #ff6a1a;
   --hm-brand-soft: #fff1e8;
   --hm-brand-deep: #e2550f;
-  --hm-buy: #12b76a;
-  --hm-buy-soft: #ecfdf3;
-  --hm-wait: #f5a524;
-  --hm-wait-soft: #fff8eb;
+  --hm-buy: var(--verdict-buy, #00c853);
+  --hm-buy-soft: var(--verdict-buy-soft, #d7fce6);
+  --hm-wait: var(--verdict-wait, #ff6200);
+  --hm-wait-soft: var(--verdict-wait-soft, #ffe8d6);
+  --hm-unknown: var(--verdict-unknown, #ffd400);
+  --hm-unknown-soft: var(--verdict-unknown-soft, #fff6bf);
   --hm-line: #dde3ea;
 
   background: var(--hm-bg);
@@ -53,7 +55,7 @@
 
 .product-premium .pdp-actions-row {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.5rem;
   width: 100%;
 }
@@ -91,7 +93,7 @@
 
 .product-premium .pdp-verdict {
   border-radius: 1rem;
-  border: 1px solid var(--hm-line);
+  border: 2px solid var(--hm-line);
   background: #fff;
   overflow: hidden;
 }
@@ -99,29 +101,55 @@
 .product-premium .pdp-verdict-buy {
   --pdp-tone: var(--hm-buy);
   --pdp-tone-soft: var(--hm-buy-soft);
+  background: var(--hm-buy-soft);
+  border-color: var(--verdict-buy, #00c853);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--hm-buy) 22%, transparent),
+    0 4px 14px color-mix(in srgb, var(--hm-buy) 12%, transparent);
 }
 
 .product-premium .pdp-verdict-wait {
   --pdp-tone: var(--hm-wait);
   --pdp-tone-soft: var(--hm-wait-soft);
+  background: var(--hm-wait-soft);
+  border-color: var(--verdict-wait, #ff6200);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--hm-wait) 22%, transparent),
+    0 4px 14px color-mix(in srgb, var(--hm-wait) 12%, transparent);
 }
 
 .product-premium .pdp-verdict-unknown {
-  --pdp-tone: #64748b;
-  --pdp-tone-soft: #f1f5f9;
+  --pdp-tone: var(--hm-unknown);
+  --pdp-tone-soft: var(--hm-unknown-soft);
+  background: var(--hm-unknown-soft);
+  border-color: var(--verdict-unknown, #ffd400);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--hm-unknown) 22%, transparent),
+    0 4px 14px color-mix(in srgb, var(--hm-unknown) 12%, transparent);
 }
 
 .product-premium .pdp-badge {
   display: inline-flex;
   align-items: center;
   border-radius: 9999px;
-  background: var(--pdp-tone-soft);
+  background: #fff;
   color: var(--pdp-tone);
   padding: 0.25rem 0.75rem;
   font-size: 0.875rem;
-  font-weight: 600;
-  ring: 1px solid color-mix(in srgb, var(--pdp-tone) 25%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pdp-tone) 22%, transparent);
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--pdp-tone) 55%, transparent);
+}
+
+.product-premium .pdp-verdict-buy .pdp-badge {
+  color: var(--verdict-buy-text, #007a33);
+}
+
+.product-premium .pdp-verdict-wait .pdp-badge {
+  color: var(--verdict-wait-text, #b34700);
+}
+
+.product-premium .pdp-verdict-unknown .pdp-badge {
+  color: var(--verdict-unknown-text, #8a7000);
 }
 
 .product-premium .pdp-section {
@@ -144,4 +172,125 @@
 
 .product-premium .pdp-telegram a:hover {
   color: var(--hm-brand-deep);
+}
+
+/* ——— DKMODE: página de produto completa ——— */
+html.dkmode .product-premium {
+  --hm-bg: var(--dk-bg, #000);
+  --hm-bg-elevated: var(--dk-surface, #111);
+  --hm-bg-soft: var(--dk-surface-2, #171717);
+  --hm-brand-soft: var(--dk-brand-soft, color-mix(in srgb, #ff6a1a 18%, #000));
+  --hm-buy-soft: var(--verdict-buy-soft);
+  --hm-wait-soft: var(--verdict-wait-soft);
+  --hm-unknown-soft: var(--verdict-unknown-soft);
+  --hm-line: var(--dk-line, #262626);
+  --hm-ink: var(--dk-ink, #f5f5f5);
+  --hm-muted: var(--dk-muted, #a3a3a3);
+  background: var(--hm-bg) !important;
+  color: var(--hm-muted);
+  color-scheme: dark;
+}
+
+html.dkmode .product-premium .pdp-section {
+  border-top-color: var(--hm-line);
+}
+
+html.dkmode .product-premium .pdp-action-btn,
+html.dkmode .pdp-action-btn {
+  background: var(--hm-bg-elevated) !important;
+  border-color: var(--hm-line) !important;
+  color: var(--hm-ink) !important;
+}
+
+html.dkmode .product-premium .pdp-action-btn:hover,
+html.dkmode .pdp-action-btn:hover {
+  background: var(--hm-bg-soft) !important;
+  border-color: var(--dk-line-strong, #333) !important;
+}
+
+html.dkmode .product-premium .pdp-action-btn--on,
+html.dkmode .pdp-action-btn--on {
+  background: color-mix(in srgb, var(--hm-brand) 16%, var(--hm-bg-elevated)) !important;
+  border-color: color-mix(in srgb, var(--hm-brand) 40%, var(--hm-line)) !important;
+  color: #ffb087 !important;
+}
+
+html.dkmode .product-premium .pdp-telegram {
+  background: var(--hm-bg-elevated) !important;
+  border-color: var(--hm-line) !important;
+}
+
+/* Manter cores de decisão no dark mode (não neutrar a borda). */
+html.dkmode .product-premium .pdp-verdict-buy {
+  background: var(--hm-buy-soft) !important;
+  border-color: var(--verdict-buy, #00c853) !important;
+}
+
+html.dkmode .product-premium .pdp-verdict-wait {
+  background: var(--hm-wait-soft) !important;
+  border-color: var(--verdict-wait, #ff6200) !important;
+}
+
+html.dkmode .product-premium .pdp-verdict-unknown {
+  background: var(--hm-unknown-soft) !important;
+  border-color: var(--verdict-unknown, #ffd400) !important;
+}
+
+html.dkmode .product-premium .pdp-verdict .border-slate-100,
+html.dkmode .product-premium .pdp-verdict [class*="border-slate-1"] {
+  border-color: color-mix(in srgb, var(--pdp-tone, var(--hm-line)) 35%, var(--hm-line)) !important;
+}
+
+html.dkmode .product-premium .text-slate-900,
+html.dkmode .product-premium .text-slate-800,
+html.dkmode .product-premium .text-slate-700 {
+  color: var(--hm-ink) !important;
+}
+
+html.dkmode .product-premium .text-slate-600,
+html.dkmode .product-premium .text-slate-500,
+html.dkmode .product-premium .text-slate-400 {
+  color: var(--hm-muted) !important;
+}
+
+html.dkmode .product-premium .pdp-verdict-buy .pdp-badge {
+  background: color-mix(in srgb, var(--verdict-buy) 18%, #000);
+  color: #5ef09a;
+}
+
+html.dkmode .product-premium .pdp-verdict-wait .pdp-badge {
+  background: color-mix(in srgb, var(--verdict-wait) 18%, #000);
+  color: #ffb087;
+}
+
+html.dkmode .product-premium .pdp-verdict-unknown .pdp-badge {
+  background: color-mix(in srgb, var(--verdict-unknown) 18%, #000);
+  color: #ffe566;
+}
+
+/* Cards / blocos internos da PDP */
+html.dkmode .product-premium .bg-white,
+html.dkmode .product-premium .bg-white\/95,
+html.dkmode .product-premium .bg-white\/80,
+html.dkmode .product-premium .bg-slate-50,
+html.dkmode .product-premium .bg-slate-50\/80,
+html.dkmode .product-premium .bg-slate-50\/60 {
+  background-color: var(--hm-bg-elevated) !important;
+}
+
+html.dkmode .product-premium .bg-slate-100,
+html.dkmode .product-premium .bg-slate-100\/80 {
+  background-color: var(--hm-bg-soft) !important;
+}
+
+html.dkmode .product-premium .border-slate-200,
+html.dkmode .product-premium .border-slate-100,
+html.dkmode .product-premium .border-slate-200\/80,
+html.dkmode .product-premium .border-slate-200\/70 {
+  border-color: var(--hm-line) !important;
+}
+
+/* Galeria / lojas / insights */
+html.dkmode .product-premium img.object-contain {
+  background-color: var(--dk-bg-raised, #0a0a0a) !important;
 }

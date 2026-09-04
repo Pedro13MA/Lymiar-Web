@@ -1,20 +1,29 @@
-import { memo } from "react";
+"use client";
+
+import { memo, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { Heart } from "lucide-react";
 import type { Product } from "@/lib/types";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { CompareAddButton } from "@/components/product/CompareAddButton";
-import { AddToCartButton } from "@/components/smart-cart/AddToCartButton";
-import { AddToProjectButton } from "@/components/projects/AddToProjectButton";
-import { buildDecisionReason, getOpportunitySeal } from "@/lib/opportunity-seal";
+import { FavoriteLoginPrompt } from "@/components/product/FavoriteLoginPrompt";
+import { FavoritesListsDrawer } from "@/components/user-space/FavoritesListsDrawer";
+import { useSession } from "@/components/auth/SessionProvider";
+import { buildProductCardVerdict } from "@/lib/consumer-decision";
+import { normalizeVerdictTone } from "@/lib/verdict-styles";
 import { referenceSourceTooltip } from "@/lib/referenceSource";
-import { formatEUR, formatPct, SEMAPHORE_LABEL, cn } from "@/lib/utils";
+import {
+  isFavorite,
+  snapshotFromProduct,
+  subscribeUserSpace,
+} from "@/lib/user-space";
+import { formatEUR, formatPct, cn } from "@/lib/utils";
+import "./OpportunityCard.css";
 
 type Props = {
   product: Product;
   showDropToday?: boolean;
-  /** Homepage: decisão → motivo → lojas. */
+  /** Homepage / categoria: decisão alinhada com PDP. */
   compact?: boolean;
   detectedAt?: string | null;
 };
@@ -29,11 +38,93 @@ function opportunityCardPropsAreEqual(prev: Props, next: Props): boolean {
     a.ean === b.ean &&
     a.slug === b.slug &&
     a.currentPrice === b.currentPrice &&
+    a.historicalMin === b.historicalMin &&
+    a.historicalMax === b.historicalMax &&
     a.name === b.name &&
     a.imageUrl === b.imageUrl &&
     a.decision.semaphore === b.decision.semaphore &&
-    a.decision.reason === b.decision.reason &&
-    a.decision.lymiarIndex?.summary === b.decision.lymiarIndex?.summary
+    a.consumerDecision?.verdict === b.consumerDecision?.verdict &&
+    a.consumerDecision?.reason === b.consumerDecision?.reason
+  );
+}
+
+function ProductCardActions({ product }: { product: Product }) {
+  const { status } = useSession();
+  const [fav, setFav] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [heartPulse, setHeartPulse] = useState(false);
+  const snap = snapshotFromProduct(product);
+
+  const refreshFav = useCallback(async () => {
+    setFav(await isFavorite(product.slug));
+  }, [product.slug]);
+
+  useEffect(() => {
+    void refreshFav();
+    const unsub = subscribeUserSpace(() => {
+      void refreshFav();
+    });
+    return unsub;
+  }, [refreshFav]);
+
+  const onFavorite = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (status !== "authenticated") {
+      setLoginOpen(true);
+      return;
+    }
+    setListOpen(true);
+    if (!fav) {
+      setHeartPulse(true);
+      window.setTimeout(() => setHeartPulse(false), 450);
+    }
+  };
+
+  return (
+    <>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          aria-pressed={fav}
+          aria-label={fav ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+          onClick={onFavorite}
+          className={cn(
+            "flex h-10 flex-1 items-center justify-center gap-2 rounded-xl border text-sm font-semibold transition-colors",
+            fav
+              ? "border-rose-200 bg-rose-50 text-rose-800"
+              : "border-[var(--hm-line,#dde3ea)] bg-white text-[var(--hm-ink,#0b1220)] hover:border-rose-300 hover:bg-rose-50/60",
+          )}
+        >
+          <Heart
+            className={cn(
+              "h-4 w-4 shrink-0",
+              fav && "fill-current",
+              heartPulse && "lymiar-anim-heart",
+            )}
+            aria-hidden
+          />
+          {fav ? "Guardado" : "Favorito"}
+        </button>
+        <CompareAddButton
+          product={product}
+          variant="card"
+          className="flex-1"
+        />
+      </div>
+
+      <FavoritesListsDrawer
+        open={listOpen}
+        onClose={() => setListOpen(false)}
+        product={snap}
+        onSaved={() => {
+          void refreshFav();
+        }}
+      />
+
+      <FavoriteLoginPrompt open={loginOpen} onClose={() => setLoginOpen(false)} />
+    </>
   );
 }
 
@@ -43,13 +134,11 @@ export const OpportunityCard = memo(function OpportunityCard({
   compact,
 }: Props) {
   const currentPrice = product.currentPrice;
-  const sem = SEMAPHORE_LABEL[product.decision.semaphore];
-  const specParts = [product.chipsetModel, product.vramSpec].filter(Boolean);
+  const historicalMin = product.historicalMin;
+  const historicalMax = product.historicalMax;
+  const verdict = buildProductCardVerdict(product);
+  const tone = normalizeVerdictTone(verdict.tone);
   const href = `/p/?id=${encodeURIComponent(product.slug)}`;
-
-  const pvpr = product.originalPrice;
-  const showPvpr =
-    Boolean(product.isOnSale) && pvpr != null && pvpr > currentPrice;
 
   const realDiscount =
     product.realDiscountPct != null
@@ -68,158 +157,88 @@ export const OpportunityCard = memo(function OpportunityCard({
     discountTooltip = referenceSourceTooltip(product.referenceSource);
   }
 
-  if (compact) {
-    const seal = getOpportunitySeal(product);
-    const reason = buildDecisionReason(product);
-    const habitual = product.referencePrice ?? product.avg30d;
-    return (
-      <article className="catalog-card flex h-full flex-col overflow-hidden">
-        <Link href={href} className="group block flex-1">
-          <div className="relative flex h-40 w-full items-center justify-center border-b border-[var(--hm-line,#dde3ea)] bg-[var(--hm-bg-soft,#eef2f6)] p-5 sm:h-44">
-            {product.imageUrl ? (
-              <Image
-                src={product.imageUrl}
-                alt={product.name}
-                fill
-                className="object-contain p-3"
-                sizes="(max-width:768px) 100vw, 33vw"
-                unoptimized
-              />
-            ) : null}
-          </div>
-          <div className="flex flex-col gap-3 p-5 pt-4">
-            <p
-              className={cn(
-                "inline-flex w-fit max-w-full items-center gap-1.5 rounded-lg px-2.5 py-1 text-[13px] font-semibold leading-snug",
-                seal.kind === "buy"
-                  ? "catalog-badge-buy"
-                  : seal.kind === "wait"
-                    ? "catalog-badge-wait"
-                    : seal.className,
-              )}
-            >
-              <span className="truncate">{seal.label}</span>
-            </p>
-            {seal.showHistoricalMin ? (
-              <p className="text-xs font-medium text-[var(--hm-brand-deep,#e2550f)]">
-                Perto do mínimo histórico observado
-              </p>
-            ) : null}
-            <p className="line-clamp-2 min-h-[2.75rem] text-[15px] font-medium leading-snug text-[var(--hm-ink,#0b1220)]">
-              {product.name}
-            </p>
-            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <p className="font-display text-[1.75rem] font-bold leading-none tracking-tight tabular-nums text-[var(--hm-ink,#0b1220)]">
-                {formatEUR(currentPrice)}
-              </p>
-              {seal.kind === "wait" && habitual != null && habitual > 0 ? (
-                <p className="text-sm text-[var(--hm-muted,#5b6b7c)]">
-                  Habitual ~{formatEUR(habitual)}
-                </p>
-              ) : null}
-            </div>
-            <p className="line-clamp-3 text-sm leading-relaxed text-[var(--hm-muted,#5b6b7c)]">
-              {reason}
-            </p>
-          </div>
-        </Link>
-        <div className="flex flex-col gap-2 px-5 pb-5">
-          <Link
-            href={`${href}#lojas`}
-            className="catalog-cta w-full"
-          >
-            Ver lojas
-          </Link>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-            <Link
-              href={`${href}#porque`}
-              className="flex h-10 items-center justify-center rounded-xl border border-[var(--hm-line,#dde3ea)] bg-white text-sm font-semibold text-[var(--hm-ink,#0b1220)] transition-colors hover:border-[var(--hm-brand,#ff6a1a)]/40 hover:bg-[var(--hm-brand-soft,#fff1e8)]"
-            >
-              Porque?
-            </Link>
-            <Link
-              href={`${href}#historico`}
-              className="flex h-10 items-center justify-center rounded-xl border border-[var(--hm-line,#dde3ea)] bg-white text-sm font-semibold text-[var(--hm-ink,#0b1220)] transition-colors hover:border-[var(--hm-brand,#ff6a1a)]/40 hover:bg-[var(--hm-brand-soft,#fff1e8)]"
-            >
-              Histórico
-            </Link>
-            <CompareAddButton product={product} compact className="h-10 w-full" />
-            <AddToCartButton product={product} compact className="h-10 w-full" />
-            <AddToProjectButton product={product} compact className="h-10 w-full" />
-          </div>
-        </div>
-      </article>
-    );
-  }
-
   return (
-    <div className="group relative flex h-full flex-col">
-      <Link href={href} className="block flex-1">
-        <Card interactive className="h-full overflow-hidden">
-          <div className="relative flex h-52 w-full items-center justify-center rounded-t-2xl border-b border-slate-100 bg-slate-50 p-4">
+    <article
+      className={cn("lymiar-product-card", `lymiar-product-card--${tone}`)}
+    >
+      <Link href={href} className="lymiar-product-card__link">
+        <div className="lymiar-product-card__media">
+          <div className="lymiar-product-card__media-inner">
             {product.imageUrl ? (
               <Image
                 src={product.imageUrl}
                 alt={product.name}
                 fill
-                className="object-contain p-3"
-                sizes="(max-width:768px) 100vw, 33vw"
+                className="object-contain"
+                sizes="(max-width:640px) 90vw, (max-width:1024px) 40vw, 280px"
+                loading="lazy"
+                quality={90}
                 unoptimized
               />
             ) : null}
-            <div className="absolute left-3 top-3 flex max-w-[70%] flex-wrap gap-1.5">
-              <Badge variant={product.decision.semaphore}>{sem.short}</Badge>
+          </div>
+          <div className="lymiar-product-card__media-fade" aria-hidden />
+        </div>
+
+        <div
+          className={cn(
+            "lymiar-product-card__verdict-bar",
+            `lymiar-product-card__verdict-bar--${tone}`,
+          )}
+        >
+          {verdict.badge}
+        </div>
+
+        <div className="lymiar-product-card__body">
+          <p className="lymiar-product-card__name">
+            {product.condition && product.condition !== "NEW" ? (
+              <span className="mr-1.5 inline-block rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wide text-amber-900">
+                {product.condition === "REFURBISHED"
+                  ? "Recond."
+                  : product.condition === "OPEN_BOX"
+                    ? "Open box"
+                    : "Outlet"}
+              </span>
+            ) : null}
+            {product.name}
+          </p>
+
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="lymiar-product-card__price-now">
+              {formatEUR(currentPrice)}
+            </p>
+            {discountLabel ? (
+              <span
+                className="cursor-help text-xs font-semibold text-[var(--verdict-buy-text,#007a33)]"
+                title={discountTooltip}
+              >
+                {discountLabel}
+              </span>
+            ) : null}
+          </div>
+
+          <div className="lymiar-product-card__range" aria-label="Intervalo de preços observados">
+            <div className="lymiar-product-card__range-row">
+              <span>Mín. observado</span>
+              <strong>{formatEUR(historicalMin)}</strong>
+            </div>
+            <div className="lymiar-product-card__sep" aria-hidden />
+            <div className="lymiar-product-card__range-row">
+              <span>Máx. observado</span>
+              <strong>{formatEUR(historicalMax)}</strong>
             </div>
           </div>
-          <CardContent className="space-y-2 p-5 pb-12">
-            <p className="line-clamp-2 font-semibold text-slate-900">
-              {product.condition && product.condition !== "NEW" ? (
-                <span className="mr-1.5 inline-block rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wide text-amber-900">
-                  {product.condition === "REFURBISHED"
-                    ? "Recond."
-                    : product.condition === "OPEN_BOX"
-                      ? "Open box"
-                      : "Outlet"}
-                </span>
-              ) : null}
-              {product.name}
-            </p>
-            {specParts.length ? (
-              <p className="text-xs font-medium text-slate-500">
-                {specParts.join(" · ")}
-              </p>
-            ) : null}
-            <div className="flex items-baseline justify-between gap-2">
-              <div className="flex flex-col">
-                <span className="font-display text-2xl font-bold text-slate-900">
-                  {formatEUR(currentPrice)}
-                </span>
-                {showPvpr ? (
-                  <span className="text-xs text-slate-400 line-through">
-                    PVPR {formatEUR(pvpr!)}
-                  </span>
-                ) : null}
-              </div>
-              {discountLabel ? (
-                <span
-                  className="relative cursor-help text-sm font-medium text-emerald-700"
-                  title={discountTooltip}
-                >
-                  {discountLabel}
-                </span>
-              ) : null}
-            </div>
-            <p className="line-clamp-2 text-xs text-slate-500">
-              {buildDecisionReason(product)}
-            </p>
-          </CardContent>
-        </Card>
+
+          <p className="lymiar-product-card__reason">{verdict.reason}</p>
+        </div>
       </Link>
-      <div className="absolute bottom-3 right-3 z-10 flex flex-wrap justify-end gap-1.5">
-        <CompareAddButton product={product} compact />
-        <AddToCartButton product={product} compact />
-        <AddToProjectButton product={product} compact />
+
+      <div className="lymiar-product-card__actions">
+        <Link href={href} className="lymiar-product-card__cta">
+          Ver produto
+        </Link>
+        {!compact ? <ProductCardActions product={product} /> : null}
       </div>
-    </div>
+    </article>
   );
 }, opportunityCardPropsAreEqual);

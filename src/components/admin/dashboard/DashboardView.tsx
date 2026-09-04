@@ -59,11 +59,11 @@ export function DashboardView({ data, liveMeta }: Props) {
         }
       />
 
-      {/* 1. Platform state */}
+      {/* 1. Platform score (daily catalog audit) */}
       <section className="mb-8">
         <SectionHeader
-          title="Estado geral"
-          description="Score, saúde e alertas — o essencial em 5 segundos"
+          title="Catálogo · auditoria diária"
+          description="Platform score e alertas agregados (job 03:00 UTC)"
         />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-surface)] p-5 shadow-sm sm:col-span-2">
@@ -100,10 +100,13 @@ export function DashboardView({ data, liveMeta }: Props) {
         </div>
       </section>
 
-      {/* 2. Quick cards */}
+      {/* 2. Live operational */}
       <section className="mb-8">
-        <SectionHeader title="Resumo rápido" />
-        <StatGrid cols={5}>
+        <SectionHeader
+          title="Operacional · tempo real"
+          description="Catálogo, tráfego e presença (poll 1s)"
+        />
+        <StatGrid cols={6}>
           {quickMetrics.map((m) => (
             <MetricCard key={m.id} {...m} />
           ))}
@@ -151,10 +154,10 @@ export function DashboardView({ data, liveMeta }: Props) {
               <MiniChart title="Ofertas" data={charts.offers} color="#12b76a" />
             ) : null}
             {charts.visits.length ? (
-              <MiniChart title="Visitas" data={charts.visits} color="#0284c7" />
+              <MiniChart title="Requests/s" data={charts.visits} color="#0284c7" />
             ) : null}
             {charts.accounts.length ? (
-              <MiniChart title="Contas" data={charts.accounts} color="#f5a524" />
+              <MiniChart title="Visitantes / logados" data={charts.accounts} color="#f5a524" />
             ) : null}
           </div>
         </section>
@@ -162,8 +165,11 @@ export function DashboardView({ data, liveMeta }: Props) {
         <section className="mb-8">
           <SectionHeader
             title="Crescimento"
-            description="Histórico preparado em system_metrics_history — gráficos na próxima iteração"
+            description="Séries de system_metrics_history"
           />
+          <p className="text-xs text-[var(--admin-faint)]">
+            Histórico ainda sem pontos suficientes — aguarda alguns minutos de coleta.
+          </p>
         </section>
       )}
 
@@ -174,9 +180,13 @@ export function DashboardView({ data, liveMeta }: Props) {
           description="Apenas problemas importantes — sem tabelas"
         />
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-          {alerts.map((alert) => (
-            <AlertCard key={alert.id} alert={alert} />
-          ))}
+          {alerts.length ? (
+            alerts.map((alert) => (
+              <AlertCard key={alert.id} alert={alert} />
+            ))
+          ) : (
+            <p className="text-sm text-[var(--admin-muted)]">Sem alertas activos no cache.</p>
+          )}
         </div>
       </section>
     </div>

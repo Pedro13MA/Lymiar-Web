@@ -4,6 +4,7 @@
  */
 
 import type { Product } from "@/lib/types";
+import { buildDecisionReason } from "@/lib/opportunity-seal";
 
 export type ConsumerVerdict = "BUY" | "WAIT" | "UNKNOWN";
 
@@ -58,7 +59,7 @@ export function consumerVerdictTone(
 
 export function consumerVerdictBadge(verdict: ConsumerVerdict): string {
   if (verdict === "BUY") return "Vale a pena comprar";
-  if (verdict === "WAIT") return "Espera mais um pouco";
+  if (verdict === "WAIT") return "Melhor esperar";
   return "Ainda não sabemos";
 }
 
@@ -71,61 +72,23 @@ export type PdpVerdictContext = {
 /** Badge PDP — distingue radar longo vs produto novo. */
 export function consumerVerdictBadgeForPdp(
   verdict: ConsumerVerdict,
-  ctx?: PdpVerdictContext,
+  _ctx?: PdpVerdictContext,
 ): string {
   if (verdict === "BUY") return "Vale a pena comprar";
-  if (verdict === "WAIT") return "Espera mais um pouco";
-  const span = ctx?.spanDays ?? 0;
-  const reason = String(ctx?.reason || "").toUpperCase();
-  if (reason === "PRICE_UNCLEAR_MONITOR" && span >= 14) return "Sem sinal firme";
-  const eligible = ctx?.eligibleObservations;
-  if (span >= 14 && eligible != null && eligible < 5) {
-    return "Sem sinal firme";
-  }
-  if (span < 7) return "Ainda não sabemos";
-  return "Sem recomendação firme";
+  if (verdict === "WAIT") return "Melhor esperar";
+  return "Ainda não sabemos";
 }
 
 export function consumerVerdictTitle(verdict: ConsumerVerdict): string {
-  if (verdict === "BUY") return "Vale a pena comprar";
-  if (verdict === "WAIT") return "Recomendamos esperar";
-  return "O Lymiar ainda está a observar este produto";
+  return consumerVerdictBadge(verdict);
 }
 
-/** Título PDP — não trata 33 dias como “produto novo”. */
+/** Título PDP — três veredictos canónicos. */
 export function consumerVerdictTitleForPdp(
   verdict: ConsumerVerdict,
-  ctx?: PdpVerdictContext,
+  _ctx?: PdpVerdictContext,
 ): string {
-  if (verdict === "BUY") return "Vale a pena comprar";
-  if (verdict === "WAIT") return "Recomendamos esperar";
-  const span = ctx?.spanDays ?? 0;
-  const eligible = ctx?.eligibleObservations;
-  const reason = String(ctx?.reason || "").toUpperCase();
-  if (reason === "PRICE_UNCLEAR_MONITOR" && span >= 14) {
-    return "Preço na média — sem sinal claro de compra ou espera";
-  }
-  if (reason === "NO_BUYABLE_OFFER") {
-    return "Sem stock confirmado nas lojas observadas";
-  }
-  if (
-    reason === "INSUFFICIENT_SAMPLE" &&
-    span >= 28 &&
-    eligible != null &&
-    eligible < 5
-  ) {
-    return "Um mês de radar — o preço ainda não deu sinal claro";
-  }
-  if (
-    reason === "INSUFFICIENT_SAMPLE" &&
-    span >= 14 &&
-    eligible != null &&
-    eligible < 5
-  ) {
-    return "Já há histórico — faltam mudanças de preço para recomendar";
-  }
-  if (span < 7) return "O Lymiar ainda está a observar este produto";
-  return "Ainda não temos um veredicto firme";
+  return consumerVerdictBadgeForPdp(verdict);
 }
 
 export function humanConsumerReason(reason: string | null | undefined): string {
@@ -241,6 +204,54 @@ export function formatPdpEvidenceFootnote(opts: PdpEvidenceFootnote): string {
     );
   }
   return parts.join(" · ");
+}
+
+export type ProductCardVerdict = {
+  badge: string;
+  reason: string;
+  tone: "buy" | "wait" | "unknown";
+};
+
+/** Veredicto de card alinhado com a secção Decisão da PDP. */
+export function buildProductCardVerdict(product: Product): ProductCardVerdict {
+  const consumer = resolveConsumerDecision(product);
+  if (consumer) {
+    const spanDays = consumer.evidence?.span_days ?? 0;
+    const eligibleObs = consumer.evidence?.eligible_observations ?? null;
+    const pdpCtx: PdpVerdictContext = {
+      spanDays,
+      eligibleObservations: eligibleObs,
+      reason: consumer.reason,
+    };
+    const tone = consumerVerdictTone(consumer.verdict);
+    const badge = consumerVerdictBadgeForPdp(consumer.verdict, pdpCtx);
+    const reason = humanConsumerReasonForPdp(consumer.reason, {
+      spanDays,
+      eligibleObservations: eligibleObs,
+    });
+    return { badge, reason, tone };
+  }
+
+  if (product.decision.semaphore === "wait") {
+    return {
+      badge: "Melhor esperar",
+      reason: buildDecisionReason(product),
+      tone: "wait",
+    };
+  }
+  if (product.decision.semaphore === "buy") {
+    return {
+      badge: "Vale a pena comprar",
+      reason: buildDecisionReason(product),
+      tone: "buy",
+    };
+  }
+  return {
+    badge: "Ainda não sabemos",
+    reason:
+      "A decisão na listagem segue o veredicto completo na página do produto.",
+    tone: "unknown",
+  };
 }
 
 export function buildVerdictFromConsumerDecision(

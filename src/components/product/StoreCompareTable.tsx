@@ -4,7 +4,9 @@ import { useMemo, useState } from "react";
 import type { Offer } from "@/lib/types";
 import {
   isOfferBuyable,
+  isOfferEligible,
   isOfferOutOfStock,
+  offerConditionLabel,
   pickBestBuyableOffer,
   pickCheapestOffer,
 } from "@/lib/product-offers";
@@ -134,7 +136,9 @@ export function StoreCompareTable({ offers }: Props) {
           bestBuyable != null &&
           offer.store === bestBuyable.store &&
           offer.price === bestBuyable.price &&
-          isOfferBuyable(offer);
+          offer.condition === bestBuyable.condition &&
+          isOfferEligible(offer);
+        const conditionLabel = offerConditionLabel(offer.condition);
         const isCheapestOos =
           cheapestOosOnly &&
           offer.store === cheapest!.store &&
@@ -143,7 +147,7 @@ export function StoreCompareTable({ offers }: Props) {
 
         return (
           <li
-            key={`${offer.store}-${offer.url}`}
+            key={`${offer.store}-${offer.condition ?? "NEW"}-${offer.url}`}
             className={cn(
               "rounded-2xl border border-slate-200/80 bg-white p-4",
               isBestBuyable && "border-emerald-200 bg-emerald-50/40",
@@ -166,12 +170,14 @@ export function StoreCompareTable({ offers }: Props) {
 
                 {isBestBuyable ? (
                   <p className="mt-1 text-xs font-semibold text-emerald-800">
-                    ⭐ Melhor preço disponível
+                    ⭐ Melhor preço novo disponível
                   </p>
                 ) : isCheapestOos ? (
                   <p className="mt-1 text-xs font-semibold text-amber-800">
                     Menor preço listado — esgotado
                   </p>
+                ) : conditionLabel ? (
+                  <p className="mt-1 text-xs font-medium text-amber-800">{conditionLabel}</p>
                 ) : null}
 
                 <dl className="mt-2 grid gap-1 text-xs text-slate-600 sm:grid-cols-2">

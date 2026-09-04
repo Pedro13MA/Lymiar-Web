@@ -4,6 +4,32 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getLojas, type MarketplaceStoreListItem } from "@/lib/api";
 import { formatEUR } from "@/lib/utils";
+import { storeDisplayName, storeLogoUrl } from "@/lib/storeLogos";
+
+function StoreListLogo({ slug, name }: { slug: string; name: string }) {
+  const [failed, setFailed] = useState(false);
+  const display = storeDisplayName(slug, name);
+  if (failed) {
+    return (
+      <span
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-semibold text-slate-600"
+        aria-hidden
+      >
+        {display.slice(0, 2).toUpperCase()}
+      </span>
+    );
+  }
+  return (
+    <img
+      src={storeLogoUrl(slug)}
+      alt=""
+      width={36}
+      height={36}
+      className="h-9 w-9 shrink-0 rounded-lg border border-slate-100 bg-white object-contain p-1"
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 export function LojasListClient() {
   const [stores, setStores] = useState<MarketplaceStoreListItem[]>([]);
@@ -53,9 +79,14 @@ export function LojasListClient() {
             <li key={s.slug}>
               <Link
                 href={`/mercado/loja/?id=${encodeURIComponent(s.slug)}`}
-                className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 hover:border-slate-300"
+                className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 hover:border-slate-300"
               >
-                <span className="font-medium text-slate-900">{s.name}</span>
+                <span className="flex min-w-0 items-center gap-3">
+                  <StoreListLogo slug={s.slug} name={s.name} />
+                  <span className="truncate font-medium text-slate-900">
+                    {storeDisplayName(s.slug, s.name)}
+                  </span>
+                </span>
                 <span className="text-xs text-slate-500">
                   {s.products} ·{" "}
                   {s.avgPrice != null ? formatEUR(s.avgPrice) : "—"}

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Menu, User } from "lucide-react";
+import { ExternalLink, Menu, User } from "lucide-react";
 import { SearchBox } from "@/components/admin/shared/SearchBox";
 import { NotificationDropdown } from "@/components/admin/shared/NotificationDropdown";
 import type { AlertItem } from "@/types/admin";
@@ -51,6 +51,13 @@ export function Topbar({
       </nav>
 
       <div className="ml-auto flex flex-1 items-center justify-end gap-2 sm:flex-none">
+        <Link
+          href="/"
+          className="hidden items-center gap-1.5 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface-2)] px-3 py-1.5 text-xs text-[var(--admin-muted)] hover:text-[var(--admin-brand)] sm:inline-flex"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+          Site público
+        </Link>
         <SearchBox
           className="hidden md:flex"
           placeholder="Pesquisar no Control Center…"
@@ -65,16 +72,15 @@ export function Topbar({
           <span className="text-xs">⌘K</span>
         </button>
         <NotificationDropdown items={notifications} />
-        <button
-          type="button"
+        <Link
+          href="/entrar/"
           className="flex h-9 items-center gap-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface-2)] px-2.5 text-xs text-[var(--admin-muted)]"
-          aria-label="Perfil"
         >
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--admin-brand-soft)] text-[var(--admin-brand)]">
             <User className="h-3.5 w-3.5" />
           </span>
-          <span className="hidden sm:inline">Admin</span>
-        </button>
+          <span className="hidden sm:inline">Conta</span>
+        </Link>
       </div>
     </header>
   );

@@ -6,6 +6,7 @@ import { CATEGORY_MENU_L1 } from "@/lib/category-slugs";
 import { LymiarLogo } from "@/components/ui/LymiarLogo";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+
 import { isP32NavigationEnabled } from "@/lib/nav/flags";
 import { SiteHeaderP32 } from "@/components/nav/SiteHeaderP32";
 import { BottomNavigation } from "@/components/nav/BottomNavigation";
@@ -17,19 +18,19 @@ function SiteHeaderLegacy() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
-      <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:px-6 lg:gap-4">
+      <div className="mx-auto flex h-12 max-w-6xl items-center gap-3 px-4 sm:px-6 lg:gap-4">
         <Link
           href="/"
           className="flex shrink-0 items-center font-display text-lg font-semibold tracking-tight text-slate-900"
           aria-label="Lymiar — início"
         >
-          <LymiarLogo size={36} variant="horizontal" alt="Lymiar" priority />
+          <LymiarLogo size={32} variant="horizontal" alt="Lymiar" priority />
         </Link>
         <nav
           className="hidden items-center gap-3 text-sm text-slate-500 md:flex"
           aria-label="Principal"
         >
-          <Link href="/categorias/" className="hover:text-slate-900">
+          <Link href="/categorias/" className="text-slate-500 hover:text-slate-900">
             Categorias
           </Link>
         </nav>
@@ -48,14 +49,6 @@ function SiteHeaderLegacy() {
         <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
           <NotificationBell />
           <UserMenu />
-          <a
-            href={TELEGRAM_CHANNEL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden shrink-0 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-slate-700 shadow-sm transition-all hover:border-slate-300 hover:shadow-md sm:inline-flex"
-          >
-            Telegram
-          </a>
         </div>
       </div>
     </header>
@@ -97,7 +90,6 @@ export function SiteFooter() {
         { href: "/listas/", label: "Listas" },
         { href: "/alertas/", label: "Alertas" },
         { href: "/projetos/", label: "Projetos" },
-        { href: "/carrinho/", label: "Carrinho" },
         { href: "/comparar/", label: "Comparador" },
       ],
     },

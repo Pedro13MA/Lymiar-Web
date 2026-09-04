@@ -121,6 +121,10 @@ type Props = {
   onApplyPrice: () => void;
   /** Category page cannot filter stock yet — hide fake control. Default true (search). */
   showInStock?: boolean;
+  /** Esconde bloco de subcategoria (navegação por URL, não filtro). */
+  hideSubcategoryFilter?: boolean;
+  /** Dentro do painel lateral da categoria — sem borda/sticky duplicado. */
+  embedded?: boolean;
 };
 
 function FacetList({
@@ -390,6 +394,8 @@ export function FilterSidebar({
   onClear,
   onApplyPrice,
   showInStock = true,
+  hideSubcategoryFilter = false,
+  embedded = false,
 }: Props) {
   const useTaxonomy = hasTaxonomyFacets(taxonomyFacets);
   const subcategories = facets.subcategories ?? [];
@@ -399,14 +405,8 @@ export function FilterSidebar({
     onClear();
   };
 
-  return (
-    <aside
-      className={cn(
-        "catalog-filters lymiar-sidebar space-y-6",
-        "lg:sticky lg:top-20 lg:max-h-[calc(100vh-100px)] lg:self-start",
-        "lg:overflow-y-auto lg:overscroll-contain lg:pr-2",
-      )}
-    >
+  const inner = (
+    <>
       <div className="flex items-center justify-between">
         <h2 className="font-display text-sm font-semibold text-[var(--hm-ink,#0b1220)]">
           Filtros
@@ -420,23 +420,25 @@ export function FilterSidebar({
         </button>
       </div>
 
-      <SubcategoryBlock
-        items={subcategories}
-        active={filters.subcategory}
-        onSelect={(value) =>
-          onSelect({
-            subcategory: value,
-            brand: "",
-            model: "",
-            vram: "",
-            series: "",
-            socket: "",
-            capacity: "",
-            format: "",
-            type: "",
-          })
-        }
-      />
+      {!hideSubcategoryFilter ? (
+        <SubcategoryBlock
+          items={subcategories}
+          active={filters.subcategory}
+          onSelect={(value) =>
+            onSelect({
+              subcategory: value,
+              brand: "",
+              model: "",
+              vram: "",
+              series: "",
+              socket: "",
+              capacity: "",
+              format: "",
+              type: "",
+            })
+          }
+        />
+      ) : null}
 
       {showInStock ? (
         <label className="flex items-center justify-between gap-3 rounded-lg border border-[var(--hm-line,#dde3ea)] px-3 py-2.5">
@@ -457,6 +459,7 @@ export function FilterSidebar({
           facets={taxonomyFacets}
           selection={taxonomySelection}
           onChange={onTaxonomySelectionChange}
+          showHeader={false}
           onClearSelection={() =>
             onTaxonomySelectionChange(clearTaxonomySelection())
           }
@@ -504,6 +507,22 @@ export function FilterSidebar({
           Aplicar preço
         </button>
       </div>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="space-y-6 border-t border-[var(--hm-line,#dde3ea)] pt-5">{inner}</div>;
+  }
+
+  return (
+    <aside
+      className={cn(
+        "catalog-filters lymiar-sidebar space-y-6",
+        "lg:sticky lg:top-20 lg:max-h-[calc(100vh-100px)] lg:self-start",
+        "lg:overflow-y-auto lg:overscroll-contain lg:pr-2",
+      )}
+    >
+      {inner}
     </aside>
   );
 }

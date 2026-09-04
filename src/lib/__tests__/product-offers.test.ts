@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   countBuyableOffers,
   isOfferBuyable,
+  isOfferEligible,
   pickBestBuyableOffer,
   pickCheapestOffer,
 } from "@/lib/product-offers";
@@ -31,9 +32,18 @@ describe("product-offers", () => {
     expect(pickCheapestOffer([oos, inStock])).toBe(oos);
   });
 
-  it("counts buyable stores", () => {
-    expect(countBuyableOffers([oos, inStock])).toBe(1);
-    expect(isOfferBuyable(inStock)).toBe(true);
-    expect(isOfferBuyable(oos)).toBe(false);
+  it("prefers NEW over cheaper refurbished", () => {
+    const refurb: Offer = {
+      store: "powerplanet",
+      storeName: "Powerplanet",
+      price: 608,
+      url: "https://c",
+      inStock: true,
+      condition: "REFURBISHED",
+    };
+    const newer: Offer = { ...inStock, store: "global", storeName: "Globaldata", price: 769.9 };
+    expect(pickBestBuyableOffer([refurb, newer])).toBe(newer);
+    expect(isOfferEligible(refurb)).toBe(false);
+    expect(countBuyableOffers([refurb, newer])).toBe(1);
   });
 });

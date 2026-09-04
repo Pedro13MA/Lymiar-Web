@@ -29,7 +29,6 @@ const FILTERS: Array<{ id: "ALL" | WatchKind; label: string }> = [
   { id: "PROJECT", label: "Projetos" },
   { id: "BRAND", label: "Marcas" },
   { id: "STORE", label: "Lojas" },
-  { id: "SMART_CART", label: "Carrinho" },
 ];
 
 const DAY_FILTERS: Array<{ days: number | null; label: string }> = [
@@ -170,7 +169,7 @@ export function TimelinePageClient() {
             <p className="mt-2 text-sm text-slate-500">
               Use{" "}
               <span className="font-medium text-slate-700">Seguir</span> em
-              produtos, categorias, marcas, lojas, projetos ou no carrinho. Os
+              produtos, categorias, marcas, lojas ou projetos. Os
               eventos aparecem quando houver alterações observadas.
             </p>
             <Link

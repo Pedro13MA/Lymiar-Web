@@ -38,6 +38,8 @@ export interface ShippingInfo {
 
 export type StockStatus = "in_stock" | "out_of_stock" | "unknown";
 
+export type OfferCondition = "NEW" | "REFURBISHED" | "OPEN_BOX" | "OUTLET";
+
 export interface Offer {
   store: string;
   storeName: string;
@@ -52,6 +54,8 @@ export interface Offer {
   effectivePrice?: number | null;
   inStock?: boolean | null;
   stockStatus?: StockStatus | null;
+  /** Condição comercial da oferta (NEW, REFURBISHED, …). */
+  condition?: OfferCondition | string | null;
   couponCode?: string | null;
   couponLabel?: string | null;
   paymentMethods?: PaymentMethod[];

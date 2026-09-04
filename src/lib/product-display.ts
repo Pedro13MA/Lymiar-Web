@@ -38,6 +38,10 @@ const LEAF_LABEL: Record<string, string> = {
   telemoveis: "Telemóveis",
   gaming: "Gaming",
   casa: "Casa",
+  furniture: "Mobiliário",
+  wall_mount: "Suportes de Parede TV",
+  phone_accessory_other: "Outros Acessórios",
+  gift_card_gaming: "Gift Cards Gaming",
   tv_audio: "TV e Áudio",
   fotografia: "Fotografia",
 };

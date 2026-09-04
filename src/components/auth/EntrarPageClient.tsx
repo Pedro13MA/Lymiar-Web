@@ -10,7 +10,6 @@ import {
   History,
   LineChart,
   List,
-  ShoppingCart,
 } from "lucide-react";
 import { SiteFooter, SiteHeader } from "@/components/layout/SiteHeader";
 import { LoginButton } from "@/components/auth/LoginButton";
@@ -19,7 +18,6 @@ import { useSession } from "@/components/auth/SessionProvider";
 import { LymiarLogo } from "@/components/ui/LymiarLogo";
 import {
   AlertsPreview,
-  CartPreview,
   ComparePreview,
   FavoritesPreview,
   HistoryPreview,
@@ -39,49 +37,43 @@ type Feature = {
 const FEATURES: Feature[] = [
   {
     title: "Favoritos",
-    body: "Guarda produtos e acompanha a evolução dos preços ao longo do tempo.",
+    body: "Guarda produtos no teu perfil para os seguir ao longo do tempo.",
     Icon: Heart,
     Preview: FavoritesPreview,
   },
   {
-    title: "Alertas inteligentes",
-    body: "Recebe notificações apenas quando o momento de compra muda.",
+    title: "Alertas por email",
+    body: "Avisa no teu email Google quando o preço chega ao alvo ou vale a pena comprar.",
     Icon: Bell,
     Preview: AlertsPreview,
   },
   {
-    title: "Timeline",
-    body: "Vê as alterações importantes de preço nos produtos que segues.",
+    title: "Notificações",
+    body: "Quando voltas, vês o que mudou desde a última sessão.",
     Icon: History,
     Preview: TimelinePreview,
   },
   {
-    title: "Carrinho inteligente",
-    body: "O carrinho continua a acompanhar preços mesmo depois de o fechares.",
-    Icon: ShoppingCart,
-    Preview: CartPreview,
-  },
-  {
     title: "Projetos",
-    body: "Cria builds de PC, renovações de casa ou listas de compras complexas.",
+    body: "Organiza builds de PC ou listas de compra complexas.",
     Icon: FolderKanban,
     Preview: ProjectsPreview,
   },
   {
     title: "Listas",
-    body: "Organiza produtos por tema — viagem, escritório ou qualquer projeto.",
+    body: "Agrupa produtos por tema — viagem, escritório ou o que precisares.",
     Icon: List,
     Preview: ListsPreview,
   },
   {
     title: "Comparador",
-    body: "Compara vários produtos lado a lado antes de tomar uma decisão.",
+    body: "Compara vários produtos lado a lado antes de decidir.",
     Icon: GitCompare,
     Preview: ComparePreview,
   },
   {
-    title: "Histórico completo",
-    body: "Consulta meses ou anos de evolução dos preços observados.",
+    title: "Histórico de preços",
+    body: "Consulta a evolução observada no catálogo — sem inventar saldos.",
     Icon: LineChart,
     Preview: HistoryPreview,
   },
@@ -126,8 +118,8 @@ function EntrarInner() {
 
             <ul className="entrar-promise">
               <li>Guarda o que te interessa e acompanha a decisão no tempo</li>
-              <li>Avisa quando o momento de compra muda</li>
-              <li>Sincroniza favoritos, listas, projetos e carrinho</li>
+              <li>Alertas por email quando o preço chega ao teu alvo</li>
+              <li>Sincroniza favoritos, projetos e listas entre dispositivos</li>
             </ul>
 
             <LoginButton

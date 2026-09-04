@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   Copy,
   FileDown,
@@ -28,6 +28,7 @@ import {
   projectTotal,
   recordCompatibilitySnapshot,
   refreshSlotFromProduct,
+  reinsertProject,
   reorderSlots,
   setSlotProduct,
   subscribeProjects,
@@ -39,7 +40,6 @@ import {
   scoreKnowledgeCompleteness,
   leafFromProduct,
 } from "@/lib/product-knowledge";
-import { addToCart, productToCartDraft } from "@/lib/smart-cart";
 import {
   addToCompare,
   productToCompareItem,
@@ -77,6 +77,7 @@ function unitPrice(slot: ProjectSlot): number {
 
 export function ProjectDetailClient() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const id = (searchParams.get("id") || "").trim();
   const { push } = useSnackbar();
   const [project, setProject] = useState<Project | null>(null);
@@ -279,23 +280,6 @@ td,th{border:1px solid #e2e8f0;padding:6px;text-align:left}@media print{body{mar
     }
   };
 
-  const addToCartSelected = async (onlySelected: boolean) => {
-    const slots = project.slots.filter(
-      (s) => s.product && (!onlySelected || s.selected),
-    );
-    let n = 0;
-    for (const s of slots) {
-      try {
-        const d = await getProductBySlug(s.product!.slug);
-        await addToCart(productToCartDraft(detailToProduct(d)));
-        n += 1;
-      } catch {
-        /* skip */
-      }
-    }
-    push(`${n} item(ns) no carrinho inteligente.`);
-  };
-
   const onDrop = async (targetSlotId: string) => {
     if (!dragId || dragId === targetSlotId) {
       setDragId(null);
@@ -321,7 +305,7 @@ td,th{border:1px solid #e2e8f0;padding:6px;text-align:left}@media print{body{mar
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 sm:pb-10 sm:pt-10">
+      <main className="mx-auto max-w-6xl px-4 pb-10 pt-6 sm:px-6 sm:pt-10">
         <nav className="mb-3 text-xs text-slate-500">
           <Link href="/projetos/" className="hover:text-slate-800">
             Projetos
@@ -378,7 +362,23 @@ td,th{border:1px solid #e2e8f0;padding:6px;text-align:left}@media print{body{mar
               size="sm"
               variant="ghost"
               onClick={() => {
-                if (window.confirm("Eliminar?")) void deleteProject(project.id);
+                if (!project) return;
+                const snapshot = JSON.parse(JSON.stringify(project)) as Project;
+                void deleteProject(project.id).then(() => {
+                  push("Projeto eliminado.", {
+                    action: {
+                      label: "Anular",
+                      onClick: () => {
+                        void reinsertProject(snapshot).then(() => {
+                          router.push(
+                            `/projetos/p/?id=${encodeURIComponent(snapshot.id)}`,
+                          );
+                        });
+                      },
+                    },
+                  });
+                  router.push("/projetos/");
+                });
               }}
             >
               Eliminar
@@ -427,16 +427,6 @@ td,th{border:1px solid #e2e8f0;padding:6px;text-align:left}@media print{body{mar
         </div>
 
         <div className="mb-4 flex flex-wrap gap-2 print:hidden">
-          <Button type="button" onClick={() => void addToCartSelected(false)}>
-            Adicionar tudo ao carrinho
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => void addToCartSelected(true)}
-          >
-            Só seleccionados
-          </Button>
           <Button type="button" variant="outline" size="sm" onClick={copyLink}>
             <Copy className="mr-1 h-3.5 w-3.5" />
             Link
@@ -709,18 +699,6 @@ td,th{border:1px solid #e2e8f0;padding:6px;text-align:left}@media print{body{mar
           numa fase futura. Total actual {formatEUR(projectTotal(project))}.
         </p>
       </main>
-
-      <div className="fixed inset-x-0 bottom-0 z-[45] border-t border-slate-200 bg-white/95 p-3 backdrop-blur sm:hidden print:hidden">
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            className="h-11 flex-1"
-            onClick={() => void addToCartSelected(false)}
-          >
-            Carrinho · {formatEUR(summary.total)}
-          </Button>
-        </div>
-      </div>
 
       {/* Search drawer — reuses searchProducts */}
       {slotSearch ? (

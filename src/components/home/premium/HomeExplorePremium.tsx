@@ -1,111 +1,92 @@
-import Link from "next/link";
-import {
-  CatCasaIcon,
-  CatGamingIcon,
-  CatLaptopIcon,
-  CatPhoneIcon,
-  CatPhotoIcon,
-  CatTvIcon,
-} from "@/components/home/premium/illustrations";
+"use client";
 
-const CATEGORIES = [
-  {
-    slug: "gaming",
-    label: "Gaming",
-    description: "GPUs, consolas e periféricos — com histórico, não só o preço do dia.",
-    Icon: CatGamingIcon,
-  },
-  {
-    slug: "casa",
-    label: "Casa",
-    description: "Eletrodomésticos e equipamento — decide com evidência temporal.",
-    Icon: CatCasaIcon,
-  },
-  {
-    slug: "telemoveis",
-    label: "Telemóveis",
-    description: "Smartphones observados ao longo do tempo, sem hype de lançamento.",
-    Icon: CatPhoneIcon,
-  },
-  {
-    slug: "informatica",
-    label: "Informática",
-    description: "Portáteis e componentes — quando o preço cruza o limiar certo.",
-    Icon: CatLaptopIcon,
-  },
-  {
-    slug: "tv_audio",
-    label: "TV e Áudio",
-    description: "Ecrãs e som com leitura honesta do histórico.",
-    Icon: CatTvIcon,
-  },
-  {
-    slug: "fotografia",
-    label: "Fotografia",
-    description: "Câmaras e ópticas — sem forçar uma compra prematura.",
-    Icon: CatPhotoIcon,
-  },
-] as const;
+import Link from "next/link";
+import { useState } from "react";
+import { PARTNER_STORES } from "@/lib/partner-stores";
+
+function PartnerStoreLogo({
+  name,
+  logoUrl,
+}: {
+  name: string;
+  logoUrl: string;
+}) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <span
+        className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white text-xs font-bold text-slate-500 ring-1 ring-slate-200"
+        aria-hidden
+      >
+        {name.slice(0, 2).toUpperCase()}
+      </span>
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={logoUrl}
+      alt=""
+      width={48}
+      height={48}
+      loading="lazy"
+      className="h-12 w-12 shrink-0 rounded-xl bg-white object-contain p-1 ring-1 ring-slate-200"
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 export function HomeExplorePremium() {
   return (
     <section
-      id="categorias"
-      className="scroll-mt-20 border-b border-[var(--hm-line)]"
-      aria-labelledby="home-explore-title"
+      id="lojas"
+      className="scroll-mt-20 border-b border-slate-200 bg-white"
     >
-      <div className="home-fade mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
-        <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--hm-faint)]">
-          Explorar
-        </p>
-        <h2
-          id="home-explore-title"
-          className="mt-4 font-display text-2xl font-semibold tracking-tight text-[var(--hm-text)] sm:text-4xl"
-        >
-          Categorias
+      <div className="home-fade mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16 lg:max-w-7xl lg:py-20">
+        <p className="home-section-kicker text-sm font-semibold">Lojas parceiras</p>
+        <h2 className="mt-3 font-display text-3xl font-bold text-slate-900 sm:text-4xl">
+          Onde o Lymiar compara preços
         </h2>
-        <p className="mt-4 max-w-xl text-[15px] text-[var(--hm-muted)]">
-          Entra por tema — a decisão continua a ser sobre o momento, não só a loja.
+        <p className="mt-4 max-w-2xl text-base leading-relaxed text-slate-600">
+          Trabalhamos com lojas parceiras e estamos sempre a ampliar a rede para
+          cobrir o máximo de retalho possível — assim ajudamos a perceber se é o
+          momento certo para comprar, loja a loja.
         </p>
-        <ul className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {CATEGORIES.map(({ slug, label, description, Icon }) => (
-            <li key={slug}>
+
+        <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {PARTNER_STORES.map((store) => (
+            <li key={store.slug}>
               <Link
-                href={`/categoria/${slug}/`}
-                className="home-surface flex h-full flex-col p-6 transition-colors duration-150 sm:p-7"
+                href={store.href}
+                className="home-partner-store group flex flex-col rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:border-orange-200 hover:shadow-md"
               >
-                <Icon className="h-16 w-16" />
-                <h3 className="mt-5 font-display text-lg font-semibold text-[var(--hm-text)]">
-                  {label}
-                </h3>
-                <p className="mt-2 flex-1 text-sm leading-relaxed text-[var(--hm-faint)]">
-                  {description}
-                </p>
-                <span className="mt-5 text-sm text-[var(--hm-brand)]">Ver →</span>
+                <div className="flex items-start gap-4">
+                  <PartnerStoreLogo name={store.name} logoUrl={store.logoUrl} />
+                  <div className="min-w-0">
+                    <h3 className="font-display text-lg font-semibold text-slate-900">
+                      {store.name}
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                      {store.description}
+                    </p>
+                  </div>
+                </div>
+                <span className="mt-4 inline-flex text-sm font-semibold text-[var(--hm-brand)] group-hover:underline">
+                  Ver loja no Lymiar →
+                </span>
               </Link>
             </li>
           ))}
         </ul>
-        <p className="mt-10 text-sm">
+
+        <p className="mt-8 text-sm text-slate-500">
           <Link
-            href="/categorias/"
-            className="text-[var(--hm-muted)] transition-colors duration-150 hover:text-[var(--hm-brand)]"
+            href="/mercado/lojas/"
+            className="font-semibold text-[var(--hm-brand)] hover:underline"
           >
-            Todas as categorias →
-          </Link>
-          <span className="mx-3 text-[var(--hm-faint)]">·</span>
-          <Link
-            href="/mercado/"
-            className="text-[var(--hm-muted)] transition-colors duration-150 hover:text-[var(--hm-brand)]"
-          >
-            Mercado
-          </Link>
-          <span className="mx-3 text-[var(--hm-faint)]">·</span>
-          <Link
-            href="/catalogo/"
-            className="text-[var(--hm-muted)] transition-colors duration-150 hover:text-[var(--hm-brand)]"
-          >
-            Catálogo
+            Ver todas as lojas →
           </Link>
         </p>
       </div>

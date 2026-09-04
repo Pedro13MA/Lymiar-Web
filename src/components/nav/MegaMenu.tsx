@@ -98,7 +98,7 @@ export function MegaMenu({ model, open, onOpenChange, triggerId }: Props) {
                   aria-selected={selected}
                   className={`rounded-lg px-3 py-2 text-left text-sm transition-colors ${
                     selected
-                      ? "bg-sky-50 font-medium text-sky-900 ring-1 ring-sky-100"
+                      ? "bg-[color-mix(in_srgb,var(--hm-brand,#ff6a1a)_14%,transparent)] font-medium text-[var(--hm-ink,#0b1220)] ring-1 ring-[color-mix(in_srgb,var(--hm-brand,#ff6a1a)_35%,transparent)]"
                       : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                   }`}
                   onMouseEnter={() => setActiveId(col.id)}
@@ -128,7 +128,7 @@ export function MegaMenu({ model, open, onOpenChange, triggerId }: Props) {
             <Link
               href={model.allCategoriesHref}
               onClick={close}
-              className="text-sm font-medium text-sky-700 transition-colors hover:text-sky-800"
+              className="text-sm font-medium text-[var(--hm-brand,#ff6a1a)] transition-colors hover:text-[var(--hm-brand-deep,#e2550f)]"
             >
               Ver todas as categorias →
             </Link>
@@ -156,7 +156,7 @@ export function MegaMenuTrigger({
       type="button"
       aria-haspopup="menu"
       aria-expanded={open}
-      className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
+      className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm text-slate-500 transition-colors hover:text-slate-100"
       onClick={() => onOpenChange(!open)}
       onMouseEnter={() => onOpenChange(true)}
     >

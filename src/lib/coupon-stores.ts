@@ -26,6 +26,9 @@ export const COUPON_HUB_STORES: CouponStoreMeta[] = [
   toMeta("amazon"),
   toMeta("pccomponentes"),
   toMeta("globaldata"),
+  toMeta("powerplanet"),
+  toMeta("padelmarket"),
+  toMeta("lumories"),
 ];
 
 /** Lojas apresentadas na homepage (logos). */

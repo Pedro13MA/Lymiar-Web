@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Bell, Heart } from "lucide-react";
 import { ProductGallery } from "@/components/product/ProductGallery";
-import { AddToCartButton } from "@/components/smart-cart/AddToCartButton";
 import { AlertRuleModal } from "@/components/user-space/AlertRuleModal";
 import { FavoritesListsDrawer } from "@/components/user-space/FavoritesListsDrawer";
 import { useSnackbar } from "@/components/user-space/Snackbar";
@@ -19,6 +18,7 @@ import { storeDisplayName } from "@/lib/storeLogos";
 import { displayLeafOrBrand } from "@/lib/product-display";
 import {
   isOfferOutOfStock,
+  offerConditionLabel,
   pickBestBuyableOffer,
   pickCheapestOffer,
 } from "@/lib/product-offers";
@@ -61,6 +61,9 @@ export function ProductHero({ product }: Props) {
     [product.offers],
   );
   const heroOffer = buyableOffer ?? cheapestOffer;
+  const heroConditionLabel = offerConditionLabel(
+    heroOffer?.condition ?? product.condition,
+  );
   const cheapestIsOos =
     cheapestOffer != null &&
     buyableOffer != null &&
@@ -126,6 +129,9 @@ export function ProductHero({ product }: Props) {
           <p className="font-display text-4xl font-bold tabular-nums tracking-tight text-slate-900 sm:text-[2.75rem]">
             {formatEUR(heroOffer?.price ?? product.currentPrice)}
           </p>
+          {heroConditionLabel ? (
+            <p className="text-sm font-medium text-amber-800">{heroConditionLabel}</p>
+          ) : null}
 
           <div className="space-y-1.5 text-sm text-slate-600">
             {bestStore ? (
@@ -211,12 +217,6 @@ export function ProductHero({ product }: Props) {
                 {fav ? "Guardado" : "Favorito"}
               </button>
 
-              <AddToCartButton
-                product={product}
-                heroTone
-                className="pdp-action-btn"
-              />
-
               <button
                 type="button"
                 aria-pressed={alertActive}
@@ -267,11 +267,12 @@ export function ProductHero({ product }: Props) {
         open={alertOpen}
         onClose={() => setAlertOpen(false)}
         product={snap}
+        historicalMin={product.historicalMin}
         onSaved={() => {
           void refreshUserSpace();
           setBellPulse(true);
           window.setTimeout(() => setBellPulse(false), 550);
-          push("Alerta guardado.");
+          push("Alerta por email activado.");
         }}
       />
     </>

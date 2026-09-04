@@ -13,6 +13,30 @@
 
 :root {
   color-scheme: light;
+  /* Veredictos — verde vivo · laranja vivo · amarelo vivo */
+  --verdict-buy: #00c853;
+  --verdict-buy-soft: #d7fce6;
+  --verdict-buy-border: #5ef09a;
+  --verdict-buy-text: #007a33;
+
+  --verdict-wait: #ff6200;
+  --verdict-wait-soft: #ffe8d6;
+  --verdict-wait-border: #ff9a4d;
+  --verdict-wait-text: #b34700;
+
+  --verdict-unknown: #ffd400;
+  --verdict-unknown-soft: #fff6bf;
+  --verdict-unknown-border: #ffe566;
+  --verdict-unknown-text: #8a7000;
+
+  /* Aliases homepage / catálogo */
+  --hm-buy: var(--verdict-buy);
+  --hm-buy-soft: var(--verdict-buy-soft);
+  --hm-wait: var(--verdict-wait);
+  --hm-wait-soft: var(--verdict-wait-soft);
+  --hm-unknown: var(--verdict-unknown);
+  --hm-unknown-soft: var(--verdict-unknown-soft);
+
   /* Semantic aliases (mirror @theme — prefer Tailwind slate/sky in components) */
   --bg-primary: #f8fafc;
   --bg-secondary: #ffffff;
@@ -210,4 +234,298 @@ body {
   .header-search-slot--in {
     animation: none;
   }
+}
+
+/* Botão Entrar — gradient Lymiar (estilo button-87) */
+.lymiar-glow-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4em 0.95em;
+  border: 0;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  text-transform: uppercase;
+  text-decoration: none;
+  background-image: linear-gradient(45deg, #ff512f 0%, #f09819 51%, #ff512f 100%);
+  background-size: 200% auto;
+  box-shadow: 0 0 14px -7px #f09819;
+  transition: 0.5s;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.lymiar-glow-btn:hover {
+  background-position: right center;
+  color: #fff;
+  text-decoration: none;
+}
+
+.lymiar-glow-btn:active {
+  transform: scale(0.95);
+}
+
+.lymiar-glow-btn:focus-visible {
+  outline: 2px solid #f09819;
+  outline-offset: 2px;
+}
+
+/* ——— Veredictos (3 cores) ——— */
+.lymiar-verdict-badge {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  border-radius: 0.5rem;
+  padding: 0.35rem 0.55rem;
+  font-weight: 600;
+  line-height: 1.3;
+  border: 1px solid transparent;
+}
+
+.lymiar-verdict-badge--buy {
+  background: var(--verdict-buy-soft);
+  color: var(--verdict-buy-text);
+  border-color: var(--verdict-buy-border);
+}
+
+.lymiar-verdict-badge--wait {
+  background: var(--verdict-wait-soft);
+  color: var(--verdict-wait-text);
+  border-color: var(--verdict-wait-border);
+}
+
+.lymiar-verdict-badge--unknown {
+  background: var(--verdict-unknown-soft);
+  color: var(--verdict-unknown-text);
+  border-color: var(--verdict-unknown-border);
+}
+
+/* Faixas sólidas (cards) — contraste no amarelo */
+.lymiar-verdict-solid--buy {
+  background: var(--verdict-buy);
+  color: #fff;
+}
+.lymiar-verdict-solid--wait {
+  background: var(--verdict-wait);
+  color: #fff;
+}
+.lymiar-verdict-solid--unknown {
+  background: var(--verdict-unknown);
+  color: #1a1500;
+}
+
+.lymiar-verdict-card--buy {
+  border-color: var(--verdict-buy-border) !important;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--verdict-buy) 22%, transparent),
+    0 4px 14px color-mix(in srgb, var(--verdict-buy) 12%, transparent);
+}
+
+.lymiar-verdict-card--wait {
+  border-color: var(--verdict-wait-border) !important;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--verdict-wait) 22%, transparent),
+    0 4px 14px color-mix(in srgb, var(--verdict-wait) 12%, transparent);
+}
+
+.lymiar-verdict-card--unknown {
+  border-color: var(--verdict-unknown-border) !important;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--verdict-unknown) 22%, transparent),
+    0 4px 14px color-mix(in srgb, var(--verdict-unknown) 12%, transparent);
+}
+
+/* =========================================================
+   DKMODE — preto absoluto, superfícies neutras, acento coral
+   Tokens canónicos em html.dkmode → todo o site herda.
+   ========================================================= */
+
+.lymiar-logo-dark {
+  display: none;
+}
+
+html.dkmode .lymiar-logo-dark {
+  display: inline-flex;
+}
+
+html.dkmode .lymiar-logo-normal {
+  display: none;
+}
+
+html.dkmode {
+  color-scheme: dark;
+
+  /* —— Paleta negra elegante —— */
+  --dk-bg: #000000;
+  --dk-bg-raised: #0a0a0a;
+  --dk-surface: #111111;
+  --dk-surface-2: #171717;
+  --dk-hover: #1c1c1c;
+  --dk-line: #262626;
+  --dk-line-strong: #333333;
+  --dk-ink: #f5f5f5;
+  --dk-muted: #a3a3a3;
+  --dk-faint: #737373;
+  --dk-brand-soft: color-mix(in srgb, #ff6a1a 18%, #000);
+
+  /* Aliases usados no site (home / catálogo / PDP) */
+  --hm-bg: var(--dk-bg);
+  --hm-bg-soft: var(--dk-surface-2);
+  --hm-bg-elevated: var(--dk-surface);
+  --hm-ink: var(--dk-ink);
+  --hm-text: var(--dk-ink);
+  --hm-muted: var(--dk-muted);
+  --hm-faint: var(--dk-faint);
+  --hm-line: var(--dk-line);
+  --hm-brand-soft: var(--dk-brand-soft);
+
+  --verdict-buy-soft: color-mix(in srgb, var(--verdict-buy) 20%, #000);
+  --verdict-wait-soft: color-mix(in srgb, var(--verdict-wait) 20%, #000);
+  --verdict-unknown-soft: color-mix(in srgb, var(--verdict-unknown) 20%, #000);
+  --verdict-buy-text: #5ef09a;
+  --verdict-wait-text: #ffb087;
+  --verdict-unknown-text: #ffe566;
+  --hm-buy-soft: var(--verdict-buy-soft);
+  --hm-wait-soft: var(--verdict-wait-soft);
+  --hm-unknown-soft: var(--verdict-unknown-soft);
+}
+
+html.dkmode nav[aria-label="Navegação inferior"] {
+  background: color-mix(in srgb, var(--dk-surface) 92%, transparent) !important;
+  border-color: var(--dk-line) !important;
+}
+
+html.dkmode nav[aria-label="Navegação inferior"] a {
+  color: var(--dk-muted) !important;
+}
+
+html.dkmode nav[aria-label="Navegação inferior"] a[aria-current="page"] {
+  color: var(--dk-ink) !important;
+}
+
+/* Só classes utilitárias reais — não apanhar hover:/focus:bg-* */
+html.dkmode .bg-white,
+html.dkmode .bg-white\/95,
+html.dkmode .bg-white\/98,
+html.dkmode .bg-white\/90,
+html.dkmode .bg-white\/80,
+html.dkmode .bg-white\/70,
+html.dkmode .bg-white\/60,
+html.dkmode .bg-slate-50,
+html.dkmode .bg-slate-50\/90,
+html.dkmode .bg-slate-50\/80,
+html.dkmode .bg-slate-50\/60 {
+  background-color: var(--dk-surface) !important;
+}
+
+html.dkmode .bg-slate-100,
+html.dkmode .bg-slate-100\/80 {
+  background-color: var(--dk-surface-2) !important;
+}
+
+html.dkmode .bg-slate-200 {
+  background-color: var(--dk-hover) !important;
+}
+
+html.dkmode .text-slate-900,
+html.dkmode .text-slate-800,
+html.dkmode .text-slate-700,
+html.dkmode .text-slate-100 {
+  color: var(--dk-ink) !important;
+}
+
+html.dkmode .text-slate-600,
+html.dkmode .text-slate-500,
+html.dkmode .text-slate-400 {
+  color: var(--dk-muted) !important;
+}
+
+html.dkmode .text-sky-700,
+html.dkmode .text-sky-800,
+html.dkmode .text-sky-900 {
+  color: #ffb087 !important;
+}
+
+html.dkmode .bg-sky-50,
+html.dkmode .bg-sky-50\/80 {
+  background-color: var(--dk-brand-soft) !important;
+}
+
+html.dkmode .border-slate-200,
+html.dkmode .border-slate-100,
+html.dkmode .border-slate-200\/90,
+html.dkmode .border-slate-200\/80,
+html.dkmode .border-slate-200\/60,
+html.dkmode .border-slate-100\/80 {
+  border-color: var(--dk-line) !important;
+}
+
+html.dkmode header,
+html.dkmode footer {
+  background-color: var(--dk-bg) !important;
+  border-color: var(--dk-line) !important;
+}
+
+html.dkmode nav[aria-label="Navegação inferior"],
+html.dkmode header.sticky {
+  background-color: var(--dk-bg) !important;
+  border-color: var(--dk-line) !important;
+}
+
+html.dkmode input,
+html.dkmode select,
+html.dkmode textarea {
+  background-color: var(--dk-surface-2) !important;
+  border-color: var(--dk-line-strong) !important;
+  color: var(--dk-ink) !important;
+}
+
+html.dkmode .header-search-slot input,
+html.dkmode header input[aria-label="Procurar produto"] {
+  background-color: var(--dk-surface-2) !important;
+  border-color: var(--dk-line-strong) !important;
+  color: var(--dk-ink) !important;
+}
+
+html.dkmode .header-search-slot input::placeholder,
+html.dkmode header input[aria-label="Procurar produto"]::placeholder {
+  color: var(--dk-faint) !important;
+}
+
+html.dkmode [role="listbox"].absolute,
+html.dkmode [id^="search"][role="listbox"],
+html.dkmode .absolute.top-full[role="listbox"] {
+  background-color: var(--dk-surface) !important;
+  border-color: var(--dk-line) !important;
+  color: var(--dk-muted) !important;
+}
+
+html.dkmode [role="menu"].border-b {
+  background-color: var(--dk-bg-raised) !important;
+  border-color: var(--dk-line) !important;
+}
+
+html.dkmode [role="menu"] .bg-gradient-to-b {
+  background-image: none !important;
+  background-color: var(--dk-bg) !important;
+}
+
+html.dkmode .shadow-sm,
+html.dkmode .shadow-md,
+html.dkmode .shadow-lg {
+  --tw-shadow-color: rgba(0, 0, 0, 0.55);
+}
+
+/* Conta / perfil — zona perigo */
+html.dkmode .perfil-danger {
+  background: color-mix(in srgb, #dc2626 14%, #000) !important;
+  border-color: color-mix(in srgb, #dc2626 35%, var(--dk-line)) !important;
 }

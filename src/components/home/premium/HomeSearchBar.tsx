@@ -23,7 +23,7 @@ export function HomeSearchBar({ autoFocus }: { autoFocus?: boolean }) {
         autoFocus={autoFocus}
         placeholder="SSD, iPhone, Air Fryer, RTX…"
         className="min-w-0 flex-1"
-        inputClassName="home-search-input h-12 rounded-xl border-0 bg-transparent pl-12 text-base text-slate-900 shadow-none placeholder:text-slate-400 focus-visible:ring-0 sm:h-14 sm:text-lg"
+        inputClassName="home-search-input h-12 rounded-xl border-0 bg-transparent pl-12 text-base text-[var(--hm-ink)] shadow-none placeholder:text-[var(--hm-faint,#94a3b8)] focus-visible:ring-0 sm:h-14 sm:text-lg"
       />
       <Link href="/search/" className="home-search-cta text-sm sm:text-base">
         Explorar

@@ -70,6 +70,27 @@ export async function fetchMe(): Promise<LymiarUser | null> {
   }
 }
 
+export async function updateMe(patch: {
+  name?: string;
+  image?: string | null;
+}): Promise<LymiarUser> {
+  return apiClient.patch<LymiarUser>("/api/v1/me", patch, {
+    headers: authHeaders(),
+    credentials: "include",
+    label: "ME_PATCH",
+  });
+}
+
+export async function deleteMe(confirmEmail: string): Promise<void> {
+  await apiClient.delete("/api/v1/me", {
+    headers: authHeaders(),
+    credentials: "include",
+    label: "ME_DELETE",
+    body: { confirmEmail },
+  });
+  setStoredToken(null);
+}
+
 export async function logoutRemote(): Promise<void> {
   try {
     await apiClient.post(

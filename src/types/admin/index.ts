@@ -5,6 +5,7 @@ export type HealthTone = "ok" | "warn" | "critical" | "neutral";
 export type AdminNavId =
   | "dashboard"
   | "produtos"
+  | "identidade"
   | "conhecimento"
   | "utilizadores"
   | "analytics"

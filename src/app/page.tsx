@@ -82,7 +82,7 @@ export default function HomePage() {
     <div className="home-premium">
       <HomeJsonLd />
       {p32 ? <SiteHeader /> : <HomeHeader />}
-      <main>
+      <main className="home-main-pad">
         <HomePageClient />
       </main>
       {p32 ? <SiteFooter /> : <HomeFooter />}

@@ -17,9 +17,10 @@ import {
   type TaxonomyFacet,
 } from "@/lib/api";
 import { apiClient, isAbortError } from "@/lib/api-client";
-import { formatEUR } from "@/lib/utils";
+import { cn, formatEUR } from "@/lib/utils";
 import { isP33SearchEnabled } from "@/lib/search/flags";
 import { SearchEmptyState } from "@/components/search/SearchEmptyState";
+import { WifiLoaderBlock } from "@/components/ui/WifiLoader";
 import {
   appendSelectionToParams,
   clearTaxonomySelection,
@@ -145,6 +146,7 @@ export function SearchPageClient() {
     url: string;
   } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [minDraft, setMinDraft] = useState(filters.minPrice);
   const [maxDraft, setMaxDraft] = useState(filters.maxPrice);
@@ -227,7 +229,9 @@ export function SearchPageClient() {
       return;
     }
     const controller = new AbortController();
-    setLoading(true);
+    const hadResults = products.length > 0;
+    setRefreshing(hadResults);
+    setLoading(!hadResults);
     setError(null);
     const offset = (filters.page - 1) * PAGE_SIZE;
     const tax = taxonomySelection;
@@ -299,7 +303,10 @@ export function SearchPageClient() {
         setCategoryRedirect(null);
       })
       .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+          setRefreshing(false);
+        }
       });
     return () => {
       controller.abort();
@@ -335,7 +342,9 @@ export function SearchPageClient() {
           <p className="mt-2 text-sm text-[var(--hm-muted)]">
             {loading
               ? "A carregar…"
-              : `${total} produto${total === 1 ? "" : "s"} encontrados`}
+              : refreshing
+                ? "Atualizando resultados…"
+                : `${total} produto${total === 1 ? "" : "s"} encontrados`}
             {inferred ? (
               <Badge variant="teal" className="ml-2">
                 {INFERRED_LABEL[inferred] || inferred}
@@ -426,8 +435,10 @@ export function SearchPageClient() {
           {canonicalHighlight ? (
             <Link
               href={
-                canonicalHighlight.href ||
-                `/catalogo/grupo/?id=${encodeURIComponent(canonicalHighlight.slug)}`
+                canonicalHighlight.href?.startsWith("/catalogo")
+                  ? `/search/?q=${encodeURIComponent(canonicalHighlight.title)}`
+                  : canonicalHighlight.href ||
+                    `/search/?q=${encodeURIComponent(canonicalHighlight.title)}`
               }
               className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--hm-brand)]/25 bg-[var(--hm-brand-soft)]/70 px-5 py-4 hover:border-[var(--hm-brand)]/40"
             >
@@ -480,17 +491,15 @@ export function SearchPageClient() {
             </div>
           ) : null}
           {loading ? (
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="h-72 animate-pulse rounded-xl border border-[var(--hm-line)] bg-[var(--hm-bg-soft)]"
-                />
-              ))}
-            </div>
+            <WifiLoaderBlock text="A procurar" />
           ) : products.length ? (
             <>
-              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              <div
+                className={cn(
+                  "grid gap-5 sm:grid-cols-2 xl:grid-cols-3 transition-opacity duration-200",
+                  refreshing && "opacity-60 pointer-events-none",
+                )}
+              >
                 {products.map((product) => (
                   <OpportunityCard key={product.ean || product.slug} product={product} compact />
                 ))}

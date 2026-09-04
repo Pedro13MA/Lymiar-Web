@@ -46,16 +46,11 @@ afterEach(() => {
 });
 
 describe("providers / Auth.js config", () => {
-  it("lista os quatro providers OAuth", () => {
-    expect(AUTH_PROVIDER_IDS).toEqual([
-      "google",
-      "apple",
-      "microsoft",
-      "github",
-    ]);
+  it("só Google OAuth", () => {
+    expect(AUTH_PROVIDER_IDS).toEqual(["google"]);
     expect(authConfig.session?.strategy).toBe("jwt");
     expect(authConfig.pages?.signIn).toBe("/entrar");
-    expect(authConfig.providers.length).toBe(4);
+    expect(authConfig.providers.length).toBe(1);
   });
 
   it("labels de login sem password", () => {
@@ -125,22 +120,19 @@ describe("OAuth login redirects", () => {
     window.location = { href: "", origin: "http://localhost:3000" };
   });
 
-  it.each(["google", "microsoft", "github", "apple"] as const)(
-    "login %s aponta para Hub OAuth",
-    (provider) => {
-      startOAuthLogin(provider);
-      expect(window.location.href).toContain(`/api/v1/auth/${provider}`);
-      expect(window.location.href).toContain("callbackUrl=");
-    },
-  );
+  it("login Google aponta para Hub OAuth", () => {
+    startOAuthLogin("google");
+    expect(window.location.href).toContain("/api/v1/auth/google");
+    expect(window.location.href).toContain("callbackUrl=");
+  });
 });
 
 describe("rotas protegidas", () => {
-  it("protege favoritos/alertas/projetos/carrinho/timeline/perfil", () => {
+  it("protege favoritos/alertas/projetos/timeline/perfil", () => {
     expect(isProtectedPath("/favoritos/")).toBe(true);
     expect(isProtectedPath("/alertas")).toBe(true);
     expect(isProtectedPath("/projetos/p/")).toBe(true);
-    expect(isProtectedPath("/carrinho/")).toBe(true);
+    expect(isProtectedPath("/carrinho/")).toBe(false);
     expect(isProtectedPath("/timeline/")).toBe(true);
     expect(isProtectedPath("/perfil/")).toBe(true);
   });
@@ -178,9 +170,9 @@ describe("UI: login / loading / menu", () => {
     await waitFor(() => {
       expect(screen.getByText("Continuar com Google")).toBeTruthy();
     });
-    expect(screen.getByText("Continuar com Apple")).toBeTruthy();
-    expect(screen.getByText("Continuar com Microsoft")).toBeTruthy();
-    expect(screen.getByText("Continuar com GitHub")).toBeTruthy();
+    expect(screen.queryByText("Continuar com Apple")).toBeNull();
+    expect(screen.queryByText("Continuar com Microsoft")).toBeNull();
+    expect(screen.queryByText("Continuar com GitHub")).toBeNull();
   });
 
   it("header anónimo mostra Entrar", async () => {
@@ -233,9 +225,11 @@ describe("UI: login / loading / menu", () => {
     expect(screen.getByText("Minha Área")).toBeTruthy();
     expect(screen.getByText("Favoritos")).toBeTruthy();
     expect(screen.getByText("Projetos")).toBeTruthy();
-    expect(screen.getByText("Carrinho")).toBeTruthy();
     expect(screen.getByText("Alertas")).toBeTruthy();
-    expect(screen.getByText("Timeline")).toBeTruthy();
+    expect(screen.getByText("Notificações")).toBeTruthy();
+    expect(screen.getByText("Perfil")).toBeTruthy();
+    expect(screen.queryByText("Carrinho")).toBeNull();
+    expect(screen.queryByText("Timeline")).toBeNull();
     expect(screen.getByText("Terminar sessão")).toBeTruthy();
   });
 });

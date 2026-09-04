@@ -5,7 +5,6 @@ export {
   MegaMenuColumn,
   MegaMenuQuickLinks,
 } from "@/components/nav/MegaMenuParts";
-export { MobileNavDrawer } from "@/components/nav/MobileNavDrawer";
 export { BottomNavigation } from "@/components/nav/BottomNavigation";
 export { SiteHeaderP32 } from "@/components/nav/SiteHeaderP32";
 export { EmptyCategory } from "@/components/nav/EmptyCategory";

@@ -3,33 +3,28 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Breadcrumbs } from "@/components/categoria/Breadcrumbs";
-import { CategoryFAQ } from "@/components/categoria/CategoryFAQ";
 import { CategorySEO } from "@/components/categoria/CategorySEO";
 import { CategorySidebar } from "@/components/categoria/CategorySidebar";
 import { OpportunityCard } from "@/components/product/OpportunityCard";
 import { FilterSidebar, type FilterValues } from "@/components/search/FilterSidebar";
 import { Button } from "@/components/ui/button";
+import { WifiLoaderBlock } from "@/components/ui/WifiLoader";
 import { WatchButton } from "@/components/watchlists/WatchButton";
-import { EntityActivityTimeline } from "@/components/watchlists/EntityActivityTimeline";
-import { CategoryFamilies } from "@/components/catalogo/CategoryFamilies";
-import { baselineFromCategoryStats } from "@/lib/watchlists";
 import {
   getCategory,
   getCategoryProducts,
-  getCategoryStats,
   summaryToProduct,
   type CategoryDetail,
-  type CategoryFaqItem,
-  type MarketplaceCategoryStats,
   type SearchFacets,
   type SearchSortBy,
   type TaxonomyFacet,
 } from "@/lib/api";
+import { resolveConsumerDecision } from "@/lib/consumer-decision";
 import {
   appendSelectionToParams,
   clearTaxonomySelection,
   countSelected,
-  selectionFromSearchParams,
+  selectionFromSearchParamsWithLegacy,
   type TaxonomySelection,
 } from "@/lib/taxonomy-facets";
 import type { Product } from "@/lib/types";
@@ -37,14 +32,27 @@ import { relatedForSlug } from "@/lib/nav/build-menu";
 import { EmptyCategory } from "@/components/nav/EmptyCategory";
 import { CategoryRelated } from "@/components/nav/CategoryLayout";
 import { useTaxonomyNavOptional } from "@/components/nav/TaxonomyTreeProvider";
+import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 24;
 
+const LEGACY_FILTER_TO_TAXONOMY: Partial<
+  Record<keyof FilterValues, string>
+> = {
+  brand: "brand",
+  store: "store",
+  model: "model",
+  vram: "vram_gb",
+  series: "series",
+  socket: "socket",
+  capacity: "capacity_gb",
+};
+
 const SORT_OPTIONS: { value: SearchSortBy; label: string }[] = [
-  { value: "lymiar_desc", label: "Melhor momento para comprar" },
+  { value: "lymiar_desc", label: "Sinal Lymiar (recomendado)" },
   { value: "price_asc", label: "Preço mais baixo" },
   { value: "price_desc", label: "Preço mais alto" },
-  { value: "discount_desc", label: "Maior Desconto" },
+  { value: "discount_desc", label: "Maior desconto" },
 ];
 
 const EMPTY_FACETS: SearchFacets = {
@@ -78,7 +86,7 @@ export function CategoryPage({ slug, initialCategory = null }: Props) {
     Number(new URLSearchParams(queryKey).get("page") || "1") || 1,
   );
   const taxonomySelection = useMemo(
-    () => selectionFromSearchParams(new URLSearchParams(queryKey)),
+    () => selectionFromSearchParamsWithLegacy(new URLSearchParams(queryKey)),
     [queryKey],
   );
   const taxonomyKey = useMemo(
@@ -89,9 +97,9 @@ export function CategoryPage({ slug, initialCategory = null }: Props) {
   const [category, setCategory] = useState<CategoryDetail | null>(initialCategory);
   const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
+  const [totalInCategory, setTotalInCategory] = useState<number | null>(null);
   const [facets, setFacets] = useState<SearchFacets>(EMPTY_FACETS);
   const [taxonomyFacets, setTaxonomyFacets] = useState<TaxonomyFacet[]>([]);
-  const [faq, setFaq] = useState<CategoryFaqItem[]>(initialCategory?.faq || []);
   const [jsonLd, setJsonLd] = useState<Record<string, unknown>[]>(
     initialCategory?.json_ld || [],
   );
@@ -99,7 +107,6 @@ export function CategoryPage({ slug, initialCategory = null }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [minDraft, setMinDraft] = useState("");
   const [maxDraft, setMaxDraft] = useState("");
-  const [stats, setStats] = useState<MarketplaceCategoryStats | null>(null);
 
   const filters: FilterValues = useMemo(() => {
     const sp = new URLSearchParams(queryKey);
@@ -146,8 +153,8 @@ export function CategoryPage({ slug, initialCategory = null }: Props) {
       if (nextPage > 1) params.set("page", String(nextPage));
       const minP = patch.minPrice ?? filters.minPrice;
       const maxP = patch.maxPrice ?? filters.maxPrice;
-      if (!selection.price_min?.length && minP) params.set("min_price", minP);
-      if (!selection.price_max?.length && maxP) params.set("max_price", maxP);
+      if (!selection.price_min?.length && minP) params.set("price_min", minP);
+      if (!selection.price_max?.length && maxP) params.set("price_max", maxP);
       appendSelectionToParams(params, selection);
       if (!selection.brand?.length && filters.brand) {
         params.append("brand", filters.brand);
@@ -168,7 +175,6 @@ export function CategoryPage({ slug, initialCategory = null }: Props) {
         .then((c) => {
           if (!cancelled) {
             setCategory(c);
-            setFaq(c.faq || []);
             setJsonLd(c.json_ld || []);
           }
         })
@@ -183,30 +189,17 @@ export function CategoryPage({ slug, initialCategory = null }: Props) {
 
   useEffect(() => {
     let cancelled = false;
-    getCategoryStats(slug)
-      .then((s) => {
-        if (!cancelled) setStats(s);
-      })
-      .catch(() => {
-        if (!cancelled) setStats(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [slug]);
-
-  useEffect(() => {
-    let cancelled = false;
     setLoading(true);
     setError(null);
     const offset = (page - 1) * PAGE_SIZE;
     const tax = taxonomySelection;
+    const hasFilters = countSelected(tax) > 0;
     getCategoryProducts(slug, {
       q: q || undefined,
       limit: PAGE_SIZE,
       offset,
       sortBy: SORT_OPTIONS.some((o) => o.value === sortBy) ? sortBy : "lymiar_desc",
-      taxonomyFilters: countSelected(tax) > 0 ? tax : undefined,
+      taxonomyFilters: hasFilters ? tax : undefined,
     })
       .then((res) => {
         if (cancelled) return;
@@ -220,6 +213,9 @@ export function CategoryPage({ slug, initialCategory = null }: Props) {
         }
         setProducts(mapped);
         setTotal(res.total);
+        setTotalInCategory(
+          res.total_in_category != null ? res.total_in_category : res.total,
+        );
         setFacets(res.facets || EMPTY_FACETS);
         setTaxonomyFacets(res.taxonomyFacets ?? []);
         setCategory((prev) =>
@@ -242,6 +238,7 @@ export function CategoryPage({ slug, initialCategory = null }: Props) {
           setError(err instanceof Error ? err.message : "Falha a carregar categoria");
           setProducts([]);
           setTotal(0);
+          setTotalInCategory(null);
         }
       })
       .finally(() => {
@@ -253,10 +250,23 @@ export function CategoryPage({ slug, initialCategory = null }: Props) {
   }, [slug, q, page, sortBy, taxonomyKey]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const hasActiveFilters =
+    countSelected(taxonomySelection) > 0 ||
+    Boolean(q) ||
+    Boolean(filters.brand) ||
+    Boolean(filters.store) ||
+    Boolean(filters.minPrice) ||
+    Boolean(filters.maxPrice);
+  const categoryTotal =
+    totalInCategory ?? (loading ? null : total);
   const recommended = useMemo(
     () =>
       products
-        .filter((p) => p.decision.lymiarIndex.value >= 70)
+        .filter((p) => {
+          const cd = resolveConsumerDecision(p);
+          if (cd?.verdict) return cd.verdict === "BUY";
+          return p.decision?.semaphore === "buy";
+        })
         .slice(0, 4),
     [products],
   );
@@ -293,10 +303,14 @@ export function CategoryPage({ slug, initialCategory = null }: Props) {
             {category?.display_name || (loading ? "A carregar" : "Categoria")}
           </h1>
           <p className="text-sm text-[var(--hm-muted)]">
-            {loading
-              ? "A carregar…"
-              : `${total} produto${total === 1 ? "" : "s"}`}
-            {q ? <span className="ml-1">· filtro «{q}»</span> : null}
+            {loading && !products.length
+              ? "A carregar produtos…"
+              : hasActiveFilters
+                ? `${total} resultado${total === 1 ? "" : "s"} com estes filtros`
+                : categoryTotal != null
+                  ? `${categoryTotal} produto${categoryTotal === 1 ? "" : "s"} nesta categoria`
+                  : `${total} produto${total === 1 ? "" : "s"}`}
+            {q ? <span className="ml-1">· «{q}»</span> : null}
           </p>
           {category?.seo ? (
             <CategorySEO
@@ -305,8 +319,6 @@ export function CategoryPage({ slug, initialCategory = null }: Props) {
               description={
                 category.seo.meta_description || category.seo.description
               }
-              updatedHint={category.updated_hint}
-              productCount={loading ? null : total}
               compact
             />
           ) : null}
@@ -320,7 +332,6 @@ export function CategoryPage({ slug, initialCategory = null }: Props) {
                 label: category.display_name,
                 href: `/categoria/${encodeURIComponent(slug)}/`,
               }}
-              baseline={stats ? baselineFromCategoryStats(stats) : null}
             />
           ) : null}
           <label className="flex flex-col gap-1 text-sm text-[var(--hm-muted)]">
@@ -350,46 +361,20 @@ export function CategoryPage({ slug, initialCategory = null }: Props) {
         </p>
       ) : null}
 
-      {stats ? (
-        <dl className="catalog-stat-strip mb-6">
-          <div>
-            <dt>Produtos</dt>
-            <dd>{stats.products}</dd>
-          </div>
-          <div>
-            <dt>Marcas</dt>
-            <dd>{stats.brands}</dd>
-          </div>
-          <div>
-            <dt>Lojas</dt>
-            <dd>{stats.stores}</dd>
-          </div>
-          <div>
-            <dt>Preço médio</dt>
-            <dd>
-              {stats.avgPrice != null
-                ? new Intl.NumberFormat("pt-PT", {
-                    style: "currency",
-                    currency: "EUR",
-                  }).format(stats.avgPrice)
-                : "—"}
-            </dd>
-          </div>
-        </dl>
-      ) : null}
-
-      <details className="catalog-panel mb-8 px-4 py-3">
-        <summary className="cursor-pointer text-sm font-medium text-[var(--hm-ink)]">
-          Atividade observada nesta categoria
-        </summary>
-        <div className="mt-3 border-t border-[var(--hm-line)] pt-3">
-          <EntityActivityTimeline kind="CATEGORY" targetKey={slug} />
-        </div>
-      </details>
-
-      <div className="grid gap-8 lg:grid-cols-[260px_1fr]">
-        <div className="space-y-6">
-          {category ? <CategorySidebar category={category} /> : null}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,272px)_minmax(0,1fr)] lg:gap-8">
+        <aside
+          className={cn(
+            "catalog-filters lymiar-sidebar order-2 space-y-0 lg:order-1 lg:sticky lg:top-20",
+            "lg:max-h-[calc(100vh-6rem)] lg:self-start lg:overflow-y-auto lg:overscroll-contain lg:pr-1",
+          )}
+        >
+          {category ? (
+            <CategorySidebar
+              category={category}
+              siblings={category.siblings}
+              embedded
+            />
+          ) : null}
           <FilterSidebar
             facets={facets}
             taxonomyFacets={taxonomyFacets}
@@ -399,19 +384,21 @@ export function CategoryPage({ slug, initialCategory = null }: Props) {
             }
             filters={filters}
             showInStock={false}
+            hideSubcategoryFilter
+            embedded
             minDraft={minDraft}
             maxDraft={maxDraft}
             onMinDraft={setMinDraft}
             onMaxDraft={setMaxDraft}
             onSelect={(patch) => {
               const nextSel = { ...taxonomySelection };
-              if (patch.brand !== undefined) {
-                if (patch.brand) nextSel.brand = [patch.brand];
-                else delete nextSel.brand;
-              }
-              if (patch.store !== undefined) {
-                if (patch.store) nextSel.store = [patch.store];
-                else delete nextSel.store;
+              for (const [legacyKey, taxKey] of Object.entries(
+                LEGACY_FILTER_TO_TAXONOMY,
+              )) {
+                const val = patch[legacyKey as keyof FilterValues];
+                if (val === undefined) continue;
+                if (val) nextSel[taxKey] = [String(val)];
+                else delete nextSel[taxKey];
               }
               router.push(
                 buildUrl(
@@ -442,19 +429,17 @@ export function CategoryPage({ slug, initialCategory = null }: Props) {
               )
             }
           />
-        </div>
+        </aside>
 
-        <section>
-          <CategoryFamilies leafHint={slug} />
+        <section className="order-1 min-w-0 lg:order-2">
           {!loading && recommended.length ? (
             <div className="catalog-section mb-8 space-y-3">
-              <p className="catalog-kicker">Decisão</p>
+              <p className="catalog-kicker">Destaques</p>
               <h2 className="font-display text-xl font-bold text-[var(--hm-ink)]">
-                Melhor momento nesta categoria
+                Sinal favorável nesta página
               </h2>
               <p className="text-sm text-[var(--hm-muted)]">
-                Produtos com sinal favorável observado nesta página — a listagem
-                completa continua abaixo.
+                Produtos com índice Lymiar elevado entre os resultados abaixo.
               </p>
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {recommended.map((product) => (
@@ -468,22 +453,17 @@ export function CategoryPage({ slug, initialCategory = null }: Props) {
             </div>
           ) : null}
           {loading ? (
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="h-72 animate-pulse rounded-xl border border-[var(--hm-line)] bg-[var(--hm-bg-soft)]"
-                />
-              ))}
-            </div>
+            <WifiLoaderBlock text="A carregar" />
           ) : products.length ? (
             <>
               <div className="mb-4 flex items-baseline justify-between gap-3">
                 <h2 className="font-display text-lg font-bold text-[var(--hm-ink)]">
-                  Produtos
+                  Todos os produtos
                 </h2>
                 <p className="text-sm text-[var(--hm-faint)]">
-                  {total} observados
+                  {hasActiveFilters
+                    ? `${total} nesta vista`
+                    : `${total} listados`}
                 </p>
               </div>
               <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
@@ -536,8 +516,6 @@ export function CategoryPage({ slug, initialCategory = null }: Props) {
           {related.length ? <CategoryRelated items={related} /> : null}
         </section>
       </div>
-
-      <CategoryFAQ items={faq.length ? faq : category?.faq || []} />
     </main>
   );
 }

@@ -26,19 +26,22 @@ export const SEMAPHORE_LABEL: Record<
     label: "Vale a pena comprar",
     short: "Comprar",
     emoji: "🟢",
-    className: "bg-emerald-50 text-emerald-800 border-emerald-200",
+    className:
+      "border-[var(--verdict-buy-border)] bg-[var(--verdict-buy-soft)] text-[var(--verdict-buy-text)]",
   },
   fair: {
-    label: "Preço razoável",
-    short: "Razoável",
+    label: "Ainda não sabemos",
+    short: "Incerto",
     emoji: "🟡",
-    className: "bg-amber-50 text-amber-900 border-amber-200",
+    className:
+      "border-[var(--verdict-unknown-border)] bg-[var(--verdict-unknown-soft)] text-[var(--verdict-unknown-text)]",
   },
   wait: {
     label: "Melhor esperar",
     short: "Esperar",
-    emoji: "🟡",
-    className: "bg-amber-50 text-amber-900 border-amber-200",
+    emoji: "🟠",
+    className:
+      "border-[var(--verdict-wait-border)] bg-[var(--verdict-wait-soft)] text-[var(--verdict-wait-text)]",
   },
 };
 
@@ -53,9 +56,9 @@ export const DECISION_UI_LABEL: Record<
   fair: SEMAPHORE_LABEL.fair,
   wait: SEMAPHORE_LABEL.wait,
   unknown: {
-    label: "Dados insuficientes",
-    emoji: "⚪",
-    className: "bg-slate-100 text-slate-700 border-slate-200",
+    label: "Ainda não sabemos",
+    emoji: "🟡",
+    className: "border-yellow-200 bg-yellow-50 text-yellow-800",
   },
 };
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useSession } from "@/components/auth/SessionProvider";
+import { GlowingNavButton } from "@/components/ui/GlowingNavButton";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { isAdminRole } from "@/lib/auth/roles";
 import { cn } from "@/lib/utils";
@@ -20,12 +21,9 @@ export function HomeAccountMenu() {
 
   if (status !== "authenticated" || !user) {
     return (
-      <Link
-        href="/entrar/"
-        className="shrink-0 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-800 transition-colors hover:border-orange-300 hover:text-[var(--hm-brand)]"
-      >
+      <GlowingNavButton href="/entrar/">
         Entrar
-      </Link>
+      </GlowingNavButton>
     );
   }
 

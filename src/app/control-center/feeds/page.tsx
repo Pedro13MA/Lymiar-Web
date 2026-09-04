@@ -1,15 +1,7 @@
 "use client";
 
-import { Store } from "lucide-react";
-import { PlaceholderPage } from "@/components/admin/shared/PlaceholderPage";
+import { FeedsAdminView } from "@/components/admin/ops/FeedsAdminView";
 
 export default function AdminFeedsPage() {
-  return (
-    <PlaceholderPage
-      title="Feeds"
-      section="Feeds"
-      description="Qualidade por merchant e evolução de feeds."
-      icon={Store}
-    />
-  );
+  return <FeedsAdminView />;
 }

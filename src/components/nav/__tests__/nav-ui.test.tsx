@@ -68,7 +68,7 @@ describe("BottomNavigation", () => {
     expect(within(nav).getByRole("link", { name: "Início" })).toBeTruthy();
     expect(within(nav).getByRole("link", { name: "Categorias" })).toBeTruthy();
     expect(within(nav).getByRole("link", { name: "Pesquisar" })).toBeTruthy();
-    expect(within(nav).getByRole("link", { name: "Alertas" })).toBeTruthy();
+    expect(within(nav).getByRole("link", { name: "Avisos" })).toBeTruthy();
     expect(within(nav).getByRole("link", { name: "Perfil" })).toBeTruthy();
   });
 });

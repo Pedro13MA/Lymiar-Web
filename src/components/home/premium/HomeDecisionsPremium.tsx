@@ -1,249 +1,206 @@
-"use client";
-
-import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useHomeDeals } from "@/components/home/premium/HomeDealsProvider";
-import { formatEUR } from "@/lib/utils";
-import type { DecisionSemaphore, Product } from "@/lib/types";
-import { MiniSparkline } from "@/components/home/premium/illustrations";
 
-function pickMatching(
-  pools: Product[][],
-  semaphores: DecisionSemaphore[],
-  used: Set<string>,
-): Product | null {
-  for (const pool of pools) {
-    for (const p of pool) {
-      if (!p.ean || used.has(p.ean)) continue;
-      if (semaphores.includes(p.decision?.semaphore)) {
-        used.add(p.ean);
-        return p;
-      }
-    }
-  }
-  return null;
+type PillarTone = "buy" | "wait" | "unknown";
+
+type StoryStep = {
+  label: string;
+  detail: string;
+  highlight?: boolean;
+};
+
+type Pillar = {
+  tone: PillarTone;
+  title: string;
+  why: string;
+  exampleIntro: string;
+  steps: StoryStep[];
+  takeaway: string;
+  cta: string;
+  href: string;
+};
+
+const PILLARS: Pillar[] = [
+  {
+    tone: "buy",
+    title: "Vale a pena comprar",
+    why:
+      "Quando o preço de hoje está dentro ou abaixo do que já observámos no mercado — não é etiqueta de “promoção”, é evidência de histórico.",
+    exampleIntro: "Gráfica RTX 5070 (exemplo fictício)",
+    steps: [
+      {
+        label: "Histórico observado",
+        detail: "A gráfica costuma estar à volta de 1 100 €.",
+      },
+      {
+        label: "O que mudou",
+        detail: "A loja baixa para 1 000 € sem jogar com o preço antes.",
+        highlight: true,
+      },
+      {
+        label: "O que o Lymiar diz",
+        detail: "Vale a pena comprar — é um preço que já vimos ser melhor.",
+      },
+      {
+        label: "Promoção falsa (contraste)",
+        detail:
+          "Uma semana depois a loja sobe a 1 300 € e “desconta” para 1 100 €. Parece saldo, mas é o preço habitual.",
+      },
+    ],
+    takeaway:
+      "Comprar quando o preço é realmente bom face ao histórico — não quando a loja inventa um desconto.",
+    cta: "Ver oportunidades agora",
+    href: "/catalog/?section=deals",
+  },
+  {
+    tone: "wait",
+    title: "Melhor esperar",
+    why:
+      "Quando o preço está alto face ao habitual, a “promoção” não compensa, ou há padrão sazonal que sugere melhor momento.",
+    exampleIntro: "SSD 1 TB (exemplo fictício)",
+    steps: [
+      {
+        label: "Histórico observado",
+        detail: "O disco costuma estar à volta de 70 €.",
+      },
+      {
+        label: "Padrão sazonal",
+        detail: "Em novembro, já vimos baixar para perto de 60 €.",
+        highlight: true,
+      },
+      {
+        label: "O que o Lymiar diz",
+        detail:
+          "Se tens pressa e precisas agora, compra. Se podes aguardar, provavelmente compensa esperar.",
+      },
+    ],
+    takeaway:
+      "Esperar não é castigo — é evitar pagar mais quando o calendário do mercado já mostrou melhores dias.",
+    cta: "Ver produtos a evitar agora",
+    href: "/catalog/?section=overpriced",
+  },
+  {
+    tone: "unknown",
+    title: "Ainda não sabemos",
+    why:
+      "Quando ainda não temos observações suficientes para um veredicto honesto. Preferimos admitir o limite a inventar certeza.",
+    exampleIntro: "Produto novo no radar (exemplo fictício)",
+    steps: [
+      {
+        label: "Situação",
+        detail: "Acabámos de começar a observar o produto — poucos dias de histórico.",
+      },
+      {
+        label: "O que falta",
+        detail:
+          "Sem série de preços estável, não sabemos se 89 € é bom, mau ou neutro.",
+        highlight: true,
+      },
+      {
+        label: "O que o Lymiar diz",
+        detail:
+          "Ainda não sabemos. O critério de compra desta vez fica pela tua escolha — comparamos lojas, mas não forçamos um veredicto.",
+      },
+    ],
+    takeaway:
+      "Honestidade antes de marketing: sem dados, não fingimos que sabemos.",
+    cta: "Explorar produtos",
+    href: "/catalog/",
+  },
+];
+
+function toneSurface(tone: PillarTone): string {
+  if (tone === "buy")
+    return "border-[var(--verdict-buy-border)]/90 bg-[var(--hm-buy-soft)]";
+  if (tone === "wait")
+    return "border-[var(--verdict-wait-border)]/90 bg-[var(--hm-wait-soft)]";
+  return "border-[var(--verdict-unknown-border)]/90 bg-[var(--hm-unknown-soft)]";
 }
 
-function looksLikeMerchantPromo(text: string): boolean {
-  return /pvpr|preço\s*de\s*venda|promoção\s*imediata|%\s*abaixo\s*do/i.test(
-    text,
-  );
+function toneBadge(tone: PillarTone): string {
+  if (tone === "buy") return "bg-[var(--hm-buy)] text-white";
+  if (tone === "wait") return "bg-[var(--hm-wait)] text-white";
+  return "bg-[var(--hm-unknown)] text-[#1a1500]";
 }
 
-function summary(p: Product): string {
-  const candidates = [
-    p.decision.lymiarIndex?.summary,
-    p.decision.reason,
-    p.decision.bullets?.[0],
-  ];
-  for (const c of candidates) {
-    const t = (c || "").trim();
-    if (t && !looksLikeMerchantPromo(t)) return t;
-  }
-  const avg = p.avg30d;
-  const min = p.historicalMin;
-  if (min != null && min > 0 && p.currentPrice <= min * 1.02) {
-    return `Perto do mínimo observado (${formatEUR(min)}).`;
-  }
-  if (avg != null && avg > 0) {
-    return `Face à média de 30 dias (${formatEUR(avg)}).`;
-  }
-  return "Com base no histórico observado.";
-}
-
-function histLine(p: Product): string | null {
-  const min = p.historicalMin;
-  const avg = p.avg30d;
-  if (min != null && min > 0) {
-    return `Mín. observado ${formatEUR(min)}`;
-  }
-  if (avg != null && avg > 0) {
-    return `Média 30d ${formatEUR(avg)}`;
-  }
-  return null;
-}
-
-function BigCard({
-  product,
-  tone,
-  badge,
-  whyLabel,
-  emptyHint,
-}: {
-  product: Product | null;
-  tone: "buy" | "wait" | "unknown";
-  badge: string;
-  whyLabel: string;
-  emptyHint: string;
-}) {
-  const [failed, setFailed] = useState(false);
-  const styles =
-    tone === "buy"
-      ? {
-          badge: "bg-[var(--hm-buy-soft)] text-[var(--hm-buy)] ring-green-200",
-          btn: "bg-[var(--hm-buy)] hover:bg-green-700 text-white",
-          spark: "green" as const,
-        }
-      : tone === "wait"
-        ? {
-            badge: "bg-[var(--hm-wait-soft)] text-amber-800 ring-amber-200",
-            btn: "bg-[var(--hm-wait)] hover:bg-amber-600 text-white",
-            spark: "amber" as const,
-          }
-        : {
-            badge: "bg-slate-100 text-slate-600 ring-slate-200",
-            btn: "bg-slate-900 hover:bg-slate-800 text-white",
-            spark: "blue" as const,
-          };
-
-  const hist = product ? histLine(product) : null;
-
-  return (
-    <article className="home-card flex h-full flex-col overflow-hidden">
-      <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 sm:px-6">
-        <span
-          className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ring-1 ${styles.badge}`}
-        >
-          {badge}
-        </span>
-        {product ? (
-          <MiniSparkline
-            min={product.historicalMin ?? product.currentPrice}
-            avg={product.avg30d ?? product.currentPrice}
-            current={product.currentPrice}
-            max={product.historicalMax ?? product.currentPrice}
-            tone={styles.spark}
-            className="h-8 w-14"
-          />
-        ) : null}
-      </div>
-      <div className="flex flex-1 flex-col p-5 sm:p-6">
-        <div className="mb-5 flex aspect-[4/3] items-center justify-center rounded-xl bg-slate-50">
-          {product?.imageUrl && !failed ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={product.imageUrl}
-              alt=""
-              loading="lazy"
-              className="max-h-full max-w-full object-contain p-4"
-              onError={() => setFailed(true)}
-            />
-          ) : (
-            <p className="px-4 text-center text-sm text-slate-400">
-              {product ? "Sem imagem" : emptyHint}
-            </p>
-          )}
-        </div>
-        {product ? (
-          <>
-            <h3 className="font-display text-lg font-semibold leading-snug text-slate-900 sm:text-xl">
-              {product.name}
-            </h3>
-            <p className="home-price-pop mt-3 font-display text-3xl font-bold tabular-nums tracking-tight text-slate-900 sm:text-4xl">
-              {formatEUR(product.currentPrice)}
-            </p>
-            {hist ? (
-              <p className="mt-1.5 text-sm text-slate-500">{hist}</p>
-            ) : null}
-            <p className="mt-4 text-sm leading-relaxed text-slate-500">
-              <span className="font-medium text-slate-700">{whyLabel}</span>{" "}
-              {summary(product)}
-            </p>
-            <div className="mt-auto pt-6">
-              <Link
-                href={`/p/?id=${encodeURIComponent(product.slug)}`}
-                className={`inline-flex h-12 w-full items-center justify-center rounded-xl px-5 text-sm font-semibold leading-none transition-colors ${styles.btn}`}
-              >
-                Ver decisão
-              </Link>
-            </div>
-          </>
-        ) : (
-          <>
-            <h3 className="font-display text-lg font-semibold text-slate-900 sm:text-xl">
-              {badge}
-            </h3>
-            <p className="mt-3 text-sm leading-relaxed text-slate-500">
-              {emptyHint}
-            </p>
-            <div className="mt-auto pt-6">
-              <Link
-                href="/search/"
-                className={`inline-flex h-12 w-full items-center justify-center rounded-xl px-5 text-sm font-semibold leading-none transition-colors ${styles.btn}`}
-              >
-                Ir à pesquisa
-              </Link>
-            </div>
-          </>
-        )}
-      </div>
-    </article>
-  );
-}
-
-/** Três cartões — cada um com um produto que corresponde ao veredicto. */
 export function HomeDecisionsPremium() {
-  const { dealsNow, dealsWait, dealsFair, loading } = useHomeDeals();
-
-  const { buyOne, waitOne, unknownOne } = useMemo(() => {
-    const used = new Set<string>();
-    const buyOne = pickMatching([dealsNow], ["buy"], used);
-    const waitOne = pickMatching([dealsWait, dealsNow], ["wait"], used);
-    const unknownOne = pickMatching(
-      [dealsFair, dealsNow, dealsWait],
-      ["fair"],
-      used,
-    );
-    return { buyOne, waitOne, unknownOne };
-  }, [dealsNow, dealsWait, dealsFair]);
-
   return (
-    <section id="decisoes" className="scroll-mt-20 bg-[var(--hm-bg)]">
-      <div className="home-fade mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24 lg:max-w-7xl">
-        <div className="max-w-2xl">
-          <p className="home-section-kicker text-sm font-semibold uppercase tracking-[0.14em]">
-            Decisão
-          </p>
-          <h2 className="mt-3 font-display text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
-            Três respostas possíveis.{" "}
-            <span className="text-[var(--hm-brand)]">Sem teatro.</span>
-          </h2>
-          <p className="mt-4 text-base text-slate-500 sm:text-lg">
-            Cada cartão mostra um produto real com esse veredicto — comprar,
-            esperar, ou ainda não sabemos.
-          </p>
-        </div>
-        {loading ? (
-          <div className="mt-12 grid gap-6 lg:grid-cols-3">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="h-[28rem] animate-pulse rounded-2xl bg-white" />
-            ))}
-          </div>
-        ) : (
-          <div className="mt-12 grid gap-6 lg:grid-cols-3">
-            <BigCard
-              product={buyOne}
-              tone="buy"
-              badge="Vale a pena comprar"
-              whyLabel="Porque recomendamos:"
-              emptyHint="Neste momento não há um produto com veredicto de comprar para mostrar."
-            />
-            <BigCard
-              product={waitOne}
-              tone="wait"
-              badge="Espera mais um pouco"
-              whyLabel="O histórico sugere:"
-              emptyHint="Neste momento não há um produto com veredicto de esperar para mostrar."
-            />
-            <BigCard
-              product={unknownOne}
-              tone="unknown"
-              badge="Ainda não sabemos"
-              whyLabel="O que vemos:"
-              emptyHint="Quando o histórico é curto, não inventamos certeza — pesquisa um produto concreto."
-            />
-          </div>
-        )}
+    <section
+      id="decisoes"
+      className="scroll-mt-20 border-b border-[var(--hm-line)] bg-[var(--hm-bg-elevated)]"
+    >
+      <div className="home-fade mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16 lg:max-w-7xl lg:py-20">
+        <p className="home-section-kicker text-sm font-semibold">Como funciona</p>
+        <h2 className="mt-3 font-display text-3xl font-bold tracking-tight text-[var(--hm-ink)] sm:text-4xl">
+          Como o Lymiar trabalha
+        </h2>
+        <p className="mt-4 max-w-2xl text-base leading-relaxed text-[var(--hm-muted)]">
+          Observamos preços ao longo do tempo e respondemos com três veredictos
+          principais. Na página do produto há mais contexto — stock, confiança da
+          amostra, histórico — mas o princípio é sempre este:
+        </p>
+
+        <ul className="mt-10 grid gap-6 lg:grid-cols-3 lg:gap-5">
+          {PILLARS.map((pillar) => (
+            <li
+              key={pillar.tone}
+              className={`home-decision-pillar home-card flex flex-col border p-5 sm:p-6 ${toneSurface(pillar.tone)}`}
+            >
+              <span
+                className={`inline-flex self-start rounded-md px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${toneBadge(pillar.tone)}`}
+              >
+                {pillar.title}
+              </span>
+
+              <p className="mt-4 text-sm leading-relaxed text-[var(--hm-muted)]">
+                <span className="font-semibold text-[var(--hm-ink)]">Porquê? </span>
+                {pillar.why}
+              </p>
+
+              <div className="home-decision-story mt-5 rounded-xl border border-[var(--hm-line)] bg-[var(--hm-bg-elevated)]/90 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--hm-faint)]">
+                  Exemplo ilustrativo
+                </p>
+                <p className="mt-1 font-display text-sm font-semibold text-[var(--hm-ink)]">
+                  {pillar.exampleIntro}
+                </p>
+                <ol className="mt-3 space-y-3">
+                  {pillar.steps.map((step) => (
+                    <li
+                      key={step.label}
+                      className={`home-decision-story-step text-sm leading-relaxed ${
+                        step.highlight
+                          ? "rounded-lg border border-[var(--hm-brand)]/30 bg-[var(--hm-brand-soft)] px-3 py-2 text-[var(--hm-ink)]"
+                          : "text-[var(--hm-muted)]"
+                      }`}
+                    >
+                      <span className="font-semibold text-[var(--hm-ink)]">
+                        {step.label}.{" "}
+                      </span>
+                      {step.detail}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
+              <p className="mt-4 text-sm leading-relaxed text-[var(--hm-muted)]">
+                {pillar.takeaway}
+              </p>
+
+              <Link
+                href={pillar.href}
+                className="mt-5 inline-flex text-sm font-semibold text-[var(--hm-brand)] hover:underline"
+              >
+                {pillar.cta} →
+              </Link>
+            </li>
+          ))}
+        </ul>
+
+        <p className="mt-8 max-w-2xl text-sm leading-relaxed text-[var(--hm-faint)]">
+          Os exemplos são fictícios para ilustrar a lógica. Nos produtos reais,
+          o veredicto vem do histórico que observámos — e é o mesmo na listagem e
+          na página do produto.
+        </p>
       </div>
     </section>
   );

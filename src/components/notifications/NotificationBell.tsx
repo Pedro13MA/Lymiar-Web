@@ -18,7 +18,16 @@ export function NotificationBell() {
   const [count, setCount] = useState(0);
   const [items, setItems] = useState<AppNotification[]>([]);
 
-  const reload = useCallback(async () => {
+  const reloadCount = useCallback(async () => {
+    if (status !== "authenticated") return;
+    try {
+      setCount(await fetchUnreadCount());
+    } catch {
+      /* offline / unauth */
+    }
+  }, [status]);
+
+  const reloadList = useCallback(async () => {
     if (status !== "authenticated") return;
     try {
       const [c, list] = await Promise.all([
@@ -33,10 +42,20 @@ export function NotificationBell() {
   }, [status]);
 
   useEffect(() => {
-    void reload();
-    const t = window.setInterval(() => void reload(), 60000);
-    return () => window.clearInterval(t);
-  }, [reload]);
+    if (status !== "authenticated") return;
+    void reloadCount();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void reloadCount();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    const t = window.setInterval(() => {
+      if (document.visibilityState === "visible") void reloadCount();
+    }, 120_000);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.clearInterval(t);
+    };
+  }, [status, reloadCount]);
 
   if (status !== "authenticated") return null;
 
@@ -45,7 +64,7 @@ export function NotificationBell() {
       <button
         type="button"
         className={cn(
-          "relative flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm hover:border-slate-300",
+          "relative flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm hover:border-slate-300 touch-manipulation",
           open && "ring-2 ring-sky-400/40",
         )}
         aria-label="Notificações"
@@ -53,7 +72,7 @@ export function NotificationBell() {
         aria-haspopup="menu"
         onClick={() => {
           setOpen((v) => !v);
-          if (!open) void reload();
+          if (!open) void reloadList();
         }}
         onBlur={() => window.setTimeout(() => setOpen(false), 180)}
       >
@@ -75,7 +94,7 @@ export function NotificationBell() {
               type="button"
               className="text-xs text-sky-700 hover:underline"
               onClick={() =>
-                void markNotificationsRead([], { all: true }).then(reload)
+                void markNotificationsRead([], { all: true }).then(reloadList)
               }
             >
               Marcar todas lidas
@@ -94,7 +113,7 @@ export function NotificationBell() {
                     role="menuitem"
                     className="block px-3 py-2.5 hover:bg-slate-50"
                     onClick={() =>
-                      void markNotificationsRead([n.id]).then(reload)
+                      void markNotificationsRead([n.id]).then(reloadList)
                     }
                   >
                     <p className="text-sm font-medium text-slate-900">

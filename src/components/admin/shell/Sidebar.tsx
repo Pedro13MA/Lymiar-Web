@@ -8,7 +8,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Database,
+  ExternalLink,
   LayoutDashboard,
+  Link2,
   Package,
   ScrollText,
   Server,
@@ -24,6 +26,7 @@ import { cn } from "@/lib/utils";
 const ICONS = {
   LayoutDashboard,
   Package,
+  Link2,
   Brain,
   Users,
   BarChart3,
@@ -131,6 +134,19 @@ export function Sidebar({
         </button>
       </div>
       {nav}
+      <div className="border-t border-[var(--admin-border)] px-2 py-2">
+        <Link
+          href="/"
+          onClick={onCloseMobile}
+          className={cn(
+            "flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-[var(--admin-muted)] hover:bg-[var(--admin-hover)] hover:text-[var(--admin-text)]",
+            collapsed && "justify-center px-0",
+          )}
+        >
+          <ExternalLink className="h-4 w-4 shrink-0" />
+          {!collapsed ? <span>Voltar ao site</span> : null}
+        </Link>
+      </div>
       <div className="border-t border-[var(--admin-border)] px-3 py-3">
         <p
           className={cn(
@@ -138,7 +154,7 @@ export function Sidebar({
             collapsed && "text-center",
           )}
         >
-          {collapsed ? "CC" : "Control Center · UI"}
+          {collapsed ? "CC" : "Control Center"}
         </p>
       </div>
     </div>

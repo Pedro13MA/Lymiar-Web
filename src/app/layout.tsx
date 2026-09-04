@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { Space_Grotesk, Source_Sans_3, JetBrains_Mono } from "next/font/google";
 import { AppProviders } from "@/components/providers/AppProviders";
+import { DkModeToggle } from "@/components/ui/DkModeToggle";
 import "./globals.css";
 
 const display = Space_Grotesk({
@@ -21,6 +22,16 @@ const mono = JetBrains_Mono({
   variable: "--font-mono-face",
   display: "swap",
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" },
+  ],
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://lymiar.com"),
@@ -93,7 +104,10 @@ export default function RootLayout({
         <link rel="manifest" href="/site.webmanifest" />
       </head>
       <body className="min-h-screen bg-slate-50 font-sans text-slate-500 antialiased">
-        <AppProviders>{children}</AppProviders>
+        <AppProviders>
+          {children}
+          <DkModeToggle />
+        </AppProviders>
         <GoogleAnalytics gaId="G-DDXSVE4ED7" />
       </body>
     </html>

@@ -9,7 +9,6 @@ const PROTECTED_PREFIXES = [
   "/favoritos",
   "/alertas",
   "/projetos",
-  "/carrinho",
   "/timeline",
   "/listas",
   "/perfil",

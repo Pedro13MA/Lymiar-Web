@@ -46,7 +46,7 @@ export function hasTaxonomyFacets(
   return Array.isArray(facets) && facets.some((f) => (f.values?.length ?? 0) > 0);
 }
 
-/** Facets não vazias, ordenadas alfabeticamente pelo label. */
+/** Facets não vazias — preserva ordem da API (specs → marca/loja). */
 export function prepareTaxonomyFacets(
   facets: TaxonomyFacet[] | null | undefined,
 ): TaxonomyFacet[] {
@@ -56,10 +56,7 @@ export function prepareTaxonomyFacets(
     .map((f) => ({
       ...f,
       values: sortFacetValues(f.type, f.values),
-    }))
-    .sort((a, b) =>
-      a.label.localeCompare(b.label, "pt", { sensitivity: "base" }),
-    );
+    }));
 }
 
 export function sortFacetValues(
@@ -185,6 +182,19 @@ export function selectionFromSearchParams(
   return out;
 }
 
+/** URL legada `min_price`/`max_price` → taxonomy `price_min`/`price_max`. */
+export function selectionFromSearchParamsWithLegacy(
+  params: URLSearchParams,
+  knownFacetIds: readonly string[] = TAXONOMY_FILTER_IDS,
+): TaxonomySelection {
+  const out = selectionFromSearchParams(params, knownFacetIds);
+  const min = (params.get("price_min") || params.get("min_price") || "").trim();
+  const max = (params.get("price_max") || params.get("max_price") || "").trim();
+  if (min && !out.price_min?.length) out.price_min = [min];
+  if (max && !out.price_max?.length) out.price_max = [max];
+  return out;
+}
+
 const EXPANDED_PREFIX = "lymiar.taxonomyFacet.expanded.";
 
 export function readFacetExpanded(facetId: string, fallback = true): boolean {
@@ -211,5 +221,18 @@ export function formatFacetValueLabel(
   _type: string | undefined,
   value: TaxonomyFacetValue,
 ): string {
-  return value.label || value.value;
+  if (value.label && value.label !== value.value) {
+    return value.label;
+  }
+  const raw = value.label || value.value;
+  const condMap: Record<string, string> = {
+    NEW: "Novo",
+    OUTLET: "Outlet",
+    OPEN_BOX: "Caixa aberta",
+    REFURBISHED: "Recondicionado",
+  };
+  if (condMap[raw.toUpperCase()]) {
+    return condMap[raw.toUpperCase()];
+  }
+  return raw;
 }

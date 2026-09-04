@@ -16,7 +16,7 @@ function looksLikeMerchantPromo(text: string): boolean {
 function semaphoreLabel(sem: DecisionSemaphore | undefined): string {
   if (sem === "buy") return "Comprar";
   if (sem === "wait") return "Esperar";
-  if (sem === "fair") return "Neutro";
+  if (sem === "fair") return "Ainda não sabemos";
   return "Ver evidência";
 }
 

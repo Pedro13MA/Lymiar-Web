@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useSession } from "@/components/auth/SessionProvider";
 import { isAdminRole } from "@/lib/auth/roles";
+import { GlowingNavButton } from "@/components/ui/GlowingNavButton";
 import { cn } from "@/lib/utils";
 
 export function UserMenu() {
@@ -21,12 +22,9 @@ export function UserMenu() {
 
   if (status !== "authenticated" || !user) {
     return (
-      <Link
-        href="/entrar/"
-        className="shrink-0 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-slate-700 shadow-sm transition-all hover:border-slate-300"
-      >
+      <GlowingNavButton href="/entrar/">
         Entrar
-      </Link>
+      </GlowingNavButton>
     );
   }
 
@@ -87,27 +85,6 @@ export function UserMenu() {
             Favoritos
           </Link>
           <Link
-            href="/projetos/"
-            role="menuitem"
-            className="block min-h-11 px-3 py-2.5 text-slate-700 hover:bg-slate-50"
-          >
-            Projetos
-          </Link>
-          <Link
-            href="/carrinho/"
-            role="menuitem"
-            className="block min-h-11 px-3 py-2.5 text-slate-700 hover:bg-slate-50"
-          >
-            Carrinho
-          </Link>
-          <Link
-            href="/notificacoes/"
-            role="menuitem"
-            className="block min-h-11 px-3 py-2.5 text-slate-700 hover:bg-slate-50"
-          >
-            Notificações
-          </Link>
-          <Link
             href="/alertas/"
             role="menuitem"
             className="block min-h-11 px-3 py-2.5 text-slate-700 hover:bg-slate-50"
@@ -115,11 +92,18 @@ export function UserMenu() {
             Alertas
           </Link>
           <Link
-            href="/timeline/"
+            href="/projetos/"
             role="menuitem"
             className="block min-h-11 px-3 py-2.5 text-slate-700 hover:bg-slate-50"
           >
-            Timeline
+            Projetos
+          </Link>
+          <Link
+            href="/notificacoes/"
+            role="menuitem"
+            className="block min-h-11 px-3 py-2.5 text-slate-700 hover:bg-slate-50"
+          >
+            Notificações
           </Link>
           <Link
             href="/perfil/"

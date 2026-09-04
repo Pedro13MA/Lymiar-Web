@@ -347,26 +347,6 @@ h1{font-size:1.25rem}
                 variant="outline"
                 size="sm"
                 onClick={async () => {
-                  const { addToCart, productToCartDraft } = await import(
-                    "@/lib/smart-cart"
-                  );
-                  for (const p of ordered) {
-                    await addToCart(productToCartDraft(p));
-                  }
-                  setShareMsg(
-                    `${ordered.length} produto(s) adicionados ao carrinho`,
-                  );
-                }}
-              >
-                Enviar para carrinho
-              </Button>
-            ) : null}
-            {ordered.length ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={async () => {
                   const { addProductToProject, createProject, listProjects } =
                     await import("@/lib/projects");
                   let projects = await listProjects();

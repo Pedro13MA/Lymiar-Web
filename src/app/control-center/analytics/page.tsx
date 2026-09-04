@@ -1,15 +1,7 @@
 "use client";
 
-import { BarChart3 } from "lucide-react";
-import { PlaceholderPage } from "@/components/admin/shared/PlaceholderPage";
+import { AnalyticsAdminView } from "@/components/admin/analytics/AnalyticsAdminView";
 
 export default function AdminAnalyticsPage() {
-  return (
-    <PlaceholderPage
-      title="Analytics"
-      section="Analytics"
-      description="Tráfego, conversão e funis — preparado para métricas reais."
-      icon={BarChart3}
-    />
-  );
+  return <AnalyticsAdminView />;
 }

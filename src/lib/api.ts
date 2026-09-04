@@ -72,6 +72,13 @@ export type ApiProductSummary = {
   realDiscountPct?: number | null;
   promotionConfidence?: number | null;
   dealScore?: number | null;
+  consumerDecision?: {
+    verdict: string;
+    confidence: number;
+    reason: string;
+    evidence?: Record<string, unknown> | null;
+    policy_version?: string | null;
+  } | null;
 };
 
 export type CouponProductsResponse = {
@@ -276,6 +283,7 @@ export type CategoryDetail = {
   taxonomy_path: string[];
   breadcrumbs: CategoryBreadcrumb[];
   children: CategoryChild[];
+  siblings?: CategoryChild[];
   seo: CategorySeo;
   faq?: CategoryFaqItem[];
   json_ld?: Record<string, unknown>[];
@@ -290,6 +298,7 @@ export type CategoryProductsResponse = {
   seo: CategorySeo;
   query?: string | null;
   total: number;
+  total_in_category?: number;
   limit: number;
   offset: number;
   sortBy: string;
@@ -355,6 +364,7 @@ export type ApiOffer = {
   inStock?: boolean | null;
   stockStatus?: "in_stock" | "out_of_stock" | "unknown" | null;
   stock_status?: "in_stock" | "out_of_stock" | "unknown" | null;
+  condition?: ProductCondition | string | null;
   couponCode?: string | null;
   couponLabel?: string | null;
   /** Backend snake_case (OfferOut). */
@@ -749,6 +759,15 @@ export function summaryToProduct(s: ApiProductSummary): Product {
     realDiscountPct: s.realDiscountPct ?? undefined,
     promotionConfidence: s.promotionConfidence ?? undefined,
     dealScore: s.dealScore ?? undefined,
+    consumerDecision: s.consumerDecision
+      ? {
+          verdict: s.consumerDecision.verdict as "BUY" | "WAIT" | "UNKNOWN",
+          confidence: Number(s.consumerDecision.confidence) || 0,
+          reason: String(s.consumerDecision.reason || ""),
+          evidence: s.consumerDecision.evidence ?? undefined,
+          policy_version: s.consumerDecision.policy_version ?? undefined,
+        }
+      : undefined,
   };
 }
 
@@ -853,6 +872,7 @@ export function detailToProduct(d: ApiProductDetail): Product {
     effectivePrice: o.effectivePrice,
     inStock: o.inStock,
     stockStatus: mapStockStatus(o.stockStatus ?? o.stock_status, o.inStock),
+    condition: normalizeCondition(o.condition),
     couponCode: o.couponCode,
     couponLabel: o.couponLabel,
     paymentMethods: mapPaymentMethods(o.payment_methods ?? o.paymentMethods),
@@ -1414,9 +1434,11 @@ export type MarketplaceStoreDetail = {
   minPrice?: number | null;
   maxPrice?: number | null;
   lastUpdate?: string | null;
-  categories: Array<{ slug: string; products: number }>;
+  categories: Array<{ slug: string; label?: string; products: number }>;
   promotions: number;
   recentProducts: MarketplaceProductCard[];
+  productOffset?: number;
+  productLimit?: number;
 };
 
 export type MarketplaceCategoryStats = {
@@ -1464,8 +1486,21 @@ export async function getLojas(limit = 80): Promise<{
   return apiGet(`/api/v1/lojas?limit=${limit}`);
 }
 
-export async function getLoja(slug: string): Promise<MarketplaceStoreDetail> {
-  return apiGet(`/api/v1/loja/${encodeURIComponent(slug)}`);
+export async function getLoja(
+  slug: string,
+  opts?: { productLimit?: number; productOffset?: number },
+): Promise<MarketplaceStoreDetail> {
+  const params = new URLSearchParams();
+  if (opts?.productLimit != null) {
+    params.set("product_limit", String(opts.productLimit));
+  }
+  if (opts?.productOffset != null) {
+    params.set("product_offset", String(opts.productOffset));
+  }
+  const qs = params.toString();
+  return apiGet(
+    `/api/v1/loja/${encodeURIComponent(slug)}${qs ? `?${qs}` : ""}`,
+  );
 }
 
 export async function getCategoryStats(

@@ -22,6 +22,9 @@ import {
   type KnowledgeCoverage,
 } from "@/services/admin/products";
 import { cn } from "@/lib/utils";
+import { QuickProductEdit } from "@/components/admin/products/QuickProductEdit";
+import { fetchAdminAudit, type AuditEntry } from "@/services/admin/audit";
+import Link from "next/link";
 
 function normalizeKnowledge(
   raw: ProductDetail["knowledgeCoverage"],
@@ -87,6 +90,9 @@ export function ProductsAdminView() {
   const eanParam = searchParams.get("ean") || "";
 
   const [q, setQ] = useState("");
+  const [filterBrand, setFilterBrand] = useState("");
+  const [filterLeaf, setFilterLeaf] = useState("");
+  const [recentEdits, setRecentEdits] = useState<AuditEntry[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<ProductSearchRow[]>([]);
@@ -111,7 +117,12 @@ export function ProductsAdminView() {
     setBusy(true);
     setError(null);
     try {
-      const res = await searchAdminProducts({ q: query, limit: 40 });
+      const res = await searchAdminProducts({
+        q: query,
+        brand: filterBrand.trim() || undefined,
+        category: filterLeaf.trim() || undefined,
+        limit: 40,
+      });
       setRows(res.products);
       setTotal(res.total);
     } catch (e) {
@@ -121,7 +132,15 @@ export function ProductsAdminView() {
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [filterBrand, filterLeaf]);
+
+  useEffect(() => {
+    void fetchAdminAudit({ resource: "ean", limit: 20 })
+      .then((r) =>
+        setRecentEdits(r.entries.filter((e) => e.action === "product.update")),
+      )
+      .catch(() => setRecentEdits([]));
+  }, [detail?.ean]);
 
   useEffect(() => {
     void runSearch("");
@@ -252,6 +271,18 @@ export function ProductsAdminView() {
               }
             />
 
+            <QuickProductEdit
+              ean={detail.ean}
+              canonicalName={detail.summary.name}
+              brand={detail.summary.brand}
+              canonicalModel={
+                (detail.product.canonical_model as string | null) ?? null
+              }
+              onSaved={() => {
+                void fetchAdminProduct(detail.ean).then(setDetail);
+              }}
+            />
+
             <Tabs tabs={TABS} value={tab} onChange={setTab} className="mb-6" />
 
             {tab === "resumo" ? (
@@ -288,29 +319,45 @@ export function ProductsAdminView() {
       />
 
       <form
-        className="mb-6 flex flex-col gap-3 sm:flex-row"
+        className="mb-4 flex flex-col gap-3"
         onSubmit={(e) => {
           e.preventDefault();
           void runSearch(q);
         }}
       >
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-faint)]" />
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-faint)]" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="EAN, nome, marca, modelo, SKU, MPN…"
+              className="h-11 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-surface)] pl-10 pr-3 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-brand)]/40 focus:ring-1 focus:ring-[var(--admin-brand)]/20"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={busy}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[var(--admin-brand)] px-5 text-sm font-semibold text-white hover:bg-[var(--admin-brand-deep)] disabled:opacity-60"
+          >
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+            Pesquisar
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-3">
           <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="EAN, nome, marca, modelo, SKU, MPN…"
-            className="h-11 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-surface)] pl-10 pr-3 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-brand)]/40 focus:ring-1 focus:ring-[var(--admin-brand)]/20"
+            value={filterBrand}
+            onChange={(e) => setFilterBrand(e.target.value)}
+            placeholder="Filtrar marca"
+            className="h-9 rounded-lg border border-[var(--admin-border)] px-3 text-sm"
+          />
+          <input
+            value={filterLeaf}
+            onChange={(e) => setFilterLeaf(e.target.value)}
+            placeholder="Filtrar leaf / categoria"
+            className="h-9 rounded-lg border border-[var(--admin-border)] px-3 text-sm"
           />
         </div>
-        <button
-          type="submit"
-          disabled={busy}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[var(--admin-brand)] px-5 text-sm font-semibold text-white hover:bg-[var(--admin-brand-deep)] disabled:opacity-60"
-        >
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-          Pesquisar
-        </button>
       </form>
 
       {error ? (
@@ -374,6 +421,29 @@ export function ProductsAdminView() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {recentEdits.length > 0 && (
+        <div className="mt-8 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-surface)] p-4">
+          <p className="text-xs font-medium uppercase text-[var(--admin-faint)]">
+            Últimas edições (audit)
+          </p>
+          <ul className="mt-3 space-y-2 text-sm">
+            {recentEdits.slice(0, 8).map((e) => (
+              <li key={e.id} className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-[var(--admin-muted)]">
+                  {new Date(e.createdAt).toLocaleString("pt-PT")}
+                </span>
+                <Link
+                  href={`/control-center/produtos/?ean=${encodeURIComponent(e.resourceId || "")}`}
+                  className="font-mono text-xs text-[var(--admin-brand)] hover:underline"
+                >
+                  {e.resourceId}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>

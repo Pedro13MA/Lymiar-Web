@@ -367,6 +367,14 @@ export async function deleteProject(id: string): Promise<void> {
   }));
 }
 
+/** Reinsere um projecto completo (undo após eliminar). */
+export async function reinsertProject(project: Project): Promise<void> {
+  await mutate((snap) => {
+    const others = snap.projects.filter((p) => p.id !== project.id);
+    return { ...snap, projects: [project, ...others] };
+  });
+}
+
 /** Actualiza preços dos snaps a partir do produto vivo. */
 export async function refreshSlotFromProduct(
   projectId: string,

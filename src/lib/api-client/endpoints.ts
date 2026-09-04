@@ -14,11 +14,11 @@ const STABLE: Partial<ApiEndpointConfig> = {
   dedupe: true,
 };
 
-/** Pesquisa — abortável, sem cache, sem dedupe. */
+/** Pesquisa — cache curto + dedupe para repetir query/filtros sem round-trip. */
 const SEARCH: Partial<ApiEndpointConfig> = {
-  timeoutMs: 15_000,
-  cacheTtlMs: 0,
-  dedupe: false,
+  timeoutMs: 12_000,
+  cacheTtlMs: 45_000,
+  dedupe: true,
 };
 
 const PREFIX_RULES: Array<[string, Partial<ApiEndpointConfig>]> = [

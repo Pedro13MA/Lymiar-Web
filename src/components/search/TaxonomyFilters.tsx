@@ -14,6 +14,7 @@ type Props = {
   selection: TaxonomySelection;
   onChange: (next: TaxonomySelection) => void;
   onClearSelection: () => void;
+  showHeader?: boolean;
 };
 
 /**
@@ -25,6 +26,7 @@ export const TaxonomyFilters = memo(function TaxonomyFilters({
   selection,
   onChange,
   onClearSelection,
+  showHeader = true,
 }: Props) {
   const prepared = useMemo(() => prepareTaxonomyFacets(facets), [facets]);
   const selectedTotal = useMemo(() => countSelected(selection), [selection]);
@@ -33,25 +35,27 @@ export const TaxonomyFilters = memo(function TaxonomyFilters({
 
   return (
     <div className="space-y-5" data-testid="taxonomy-filters">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--hm-faint,#8b9aab)]">
-          Filtros
+      {showHeader ? (
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--hm-faint,#8b9aab)]">
+            Atributos
+            {selectedTotal > 0 ? (
+              <span className="ml-1 text-[var(--hm-brand-deep,#e2550f)]">
+                ({selectedTotal})
+              </span>
+            ) : null}
+          </p>
           {selectedTotal > 0 ? (
-            <span className="ml-1 text-[var(--hm-brand-deep,#e2550f)]">
-              ({selectedTotal})
-            </span>
+            <button
+              type="button"
+              className="text-[11px] text-[var(--hm-brand-deep,#e2550f)] hover:underline"
+              onClick={onClearSelection}
+            >
+              Limpar selecção
+            </button>
           ) : null}
-        </p>
-        {selectedTotal > 0 ? (
-          <button
-            type="button"
-            className="text-[11px] text-[var(--hm-brand-deep,#e2550f)] hover:underline"
-            onClick={onClearSelection}
-          >
-            Limpar selecção
-          </button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
       {prepared.map((facet) => (
         <TaxonomyFacetPanel
           key={facet.id}

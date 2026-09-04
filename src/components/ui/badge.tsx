@@ -9,9 +9,10 @@ const badgeVariants = cva(
       variant: {
         default: "border-slate-200 bg-slate-50 text-slate-700",
         teal: "border-sky-200 bg-sky-50 text-sky-700",
-        buy: "border-emerald-200 bg-emerald-50 text-emerald-700",
-        fair: "border-amber-200 bg-amber-50 text-amber-700",
-        wait: "border-rose-200 bg-rose-50 text-rose-700",
+        buy: "border-[var(--verdict-buy-border)] bg-[var(--verdict-buy-soft)] text-[var(--verdict-buy-text)]",
+        fair: "border-[var(--verdict-unknown-border)] bg-[var(--verdict-unknown-soft)] text-[var(--verdict-unknown-text)]",
+        wait: "border-[var(--verdict-wait-border)] bg-[var(--verdict-wait-soft)] text-[var(--verdict-wait-text)]",
+        unknown: "border-[var(--verdict-unknown-border)] bg-[var(--verdict-unknown-soft)] text-[var(--verdict-unknown-text)]",
         tier: "border-slate-200 bg-white text-slate-600",
       },
     },

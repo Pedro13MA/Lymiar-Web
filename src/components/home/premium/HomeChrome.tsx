@@ -13,15 +13,15 @@ export function HomeHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
-      <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:h-16 sm:px-6 lg:max-w-7xl lg:gap-4">
+      <div className="mx-auto flex h-12 max-w-6xl items-center gap-3 px-4 sm:px-6 lg:max-w-7xl lg:gap-4">
         <Link href="/" className="flex shrink-0 items-center" aria-label="Lymiar — início">
-          <LymiarLogo size={40} variant="horizontal" alt="Lymiar" priority />
+          <LymiarLogo size={32} variant="horizontal" alt="Lymiar" priority />
         </Link>
         <nav
           className="hidden items-center gap-4 text-sm text-slate-500 lg:flex"
           aria-label="Principal"
         >
-          <Link href="/categorias/" className="hover:text-[var(--hm-brand)]">
+          <Link href="/categorias/" className="text-slate-500 hover:text-slate-900">
             Categorias
           </Link>
         </nav>
@@ -39,14 +39,6 @@ export function HomeHeader() {
         {!showHeaderSearch ? <div className="min-w-0 flex-1" aria-hidden /> : null}
         <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
           <HomeAccountMenu />
-          <a
-            href={TELEGRAM_CHANNEL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden text-slate-500 hover:text-[var(--hm-brand)] lg:inline"
-          >
-            Telegram
-          </a>
         </div>
       </div>
     </header>

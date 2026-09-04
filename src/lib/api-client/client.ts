@@ -424,7 +424,18 @@ export const apiClient = {
     return request<T>("PUT", path, { ...opts, body });
   },
 
-  delete(path: string, opts?: Omit<ApiRequestOptions, "method" | "body">) {
+  patch<T>(
+    path: string,
+    body?: unknown,
+    opts?: Omit<ApiRequestOptions, "method" | "body">,
+  ) {
+    return request<T>("PATCH", path, { ...opts, body });
+  },
+
+  delete(
+    path: string,
+    opts?: Omit<ApiRequestOptions, "method"> & { body?: unknown },
+  ) {
     return request<void>("DELETE", path, opts);
   },
 

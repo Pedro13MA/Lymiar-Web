@@ -1,15 +1,7 @@
 "use client";
 
-import { Server } from "lucide-react";
-import { PlaceholderPage } from "@/components/admin/shared/PlaceholderPage";
+import { InfrastructureAdminView } from "@/components/admin/ops/InfrastructureAdminView";
 
 export default function AdminInfraPage() {
-  return (
-    <PlaceholderPage
-      title="Infraestrutura"
-      section="Infraestrutura"
-      description="VPS, API, frontend, workers e certificados."
-      icon={Server}
-    />
-  );
+  return <InfrastructureAdminView />;
 }

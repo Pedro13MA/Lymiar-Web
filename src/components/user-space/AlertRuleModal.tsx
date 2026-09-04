@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useSession } from "@/components/auth/SessionProvider";
 import { getAlertForProduct, upsertAlert } from "@/lib/user-space";
 import {
   ALERT_CONDITION_LABEL,
@@ -21,8 +22,10 @@ type Props = {
   onClose: () => void;
   product: ProductSnapshot;
   onSaved?: (rule: AlertRule) => void;
-  /** UI simplificada para a página de produto (FASE 8.4). */
+  /** UI simplificada para a página de produto. */
   variant?: "full" | "product";
+  /** Mínimo histórico observado — ajuda a calibrar o alvo. */
+  historicalMin?: number | null;
 };
 
 const KINDS: AlertKind[] = [
@@ -41,13 +44,22 @@ const CONDITIONS: AlertConditionId[] = [
   "USED",
 ];
 
+type ProductMode = "price" | "percent";
+
+function parsePositive(raw: string): number | null {
+  const n = Number(String(raw).replace(",", ".").trim());
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 export function AlertRuleModal({
   open,
   onClose,
   product,
   onSaved,
   variant = "full",
+  historicalMin = null,
 }: Props) {
+  const { status } = useSession();
   const [kind, setKind] = useState<AlertKind>("price_below");
   const [priceTarget, setPriceTarget] = useState("");
   const [percentBelow, setPercentBelow] = useState("10");
@@ -56,10 +68,7 @@ export function AlertRuleModal({
   const [conditions, setConditions] = useState<AlertConditionId[]>(["NEW"]);
   const [existingId, setExistingId] = useState<string | undefined>();
   const [saving, setSaving] = useState(false);
-  // FASE 8.4 — UI simplificada: controla apenas as 2 opções pedidas.
-  const [mode, setMode] = useState<"below_current" | "price_specific">(
-    "below_current",
-  );
+  const [mode, setMode] = useState<ProductMode>("percent");
 
   useEffect(() => {
     if (!open) return;
@@ -79,65 +88,86 @@ export function AlertRuleModal({
         setStoresAll(existing.stores === "all");
         setStores(existing.stores === "all" ? [] : existing.stores);
         setConditions(existing.conditions.length ? existing.conditions : ["NEW"]);
+        if (variant === "product") {
+          setMode(existing.kind === "percent_below" ? "percent" : "price");
+          if (
+            existing.kind === "price_below" &&
+            existing.priceTarget != null &&
+            !(existing.percentBelow != null)
+          ) {
+            setPriceTarget(String(existing.priceTarget));
+          }
+        }
       } else {
         setExistingId(undefined);
         setKind("price_below");
-        setPriceTarget(
+        const defaultPct = 10;
+        const defaultTarget =
           product.currentPrice > 0
-            ? String(Math.floor(product.currentPrice * 0.9))
-            : "",
-        );
-        setPercentBelow("10");
+            ? Math.round(product.currentPrice * (1 - defaultPct / 100) * 100) /
+              100
+            : 0;
+        setPriceTarget(defaultTarget > 0 ? String(defaultTarget) : "");
+        setPercentBelow(String(defaultPct));
         setStoresAll(true);
         setStores([]);
         setConditions(["NEW"]);
+        setMode("percent");
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [open, product.slug, product.currentPrice]);
+  }, [open, product.slug, product.currentPrice, variant]);
 
-  useEffect(() => {
-    if (!open) return;
-    if (variant !== "product") return;
+  const percentValue = parsePositive(percentBelow);
+  const priceFromPercent =
+    percentValue != null && product.currentPrice > 0
+      ? Math.round(product.currentPrice * (1 - percentValue / 100) * 100) / 100
+      : null;
 
-    const pt = Number(priceTarget || "");
-    if (kind === "price_below" && pt > 0) {
-      setMode(Math.abs(pt - product.currentPrice) <= 0.01 ? "below_current" : "price_specific");
-      return;
-    }
+  const absoluteTarget =
+    mode === "percent" ? priceFromPercent : parsePositive(priceTarget);
 
-    setMode("below_current");
-  }, [open, variant, kind, priceTarget, product.currentPrice]);
+  const histMin =
+    historicalMin != null && historicalMin > 0 ? historicalMin : null;
+
+  const unrealistic = useMemo(() => {
+    if (absoluteTarget == null || !(product.currentPrice > 0)) return false;
+    if (absoluteTarget >= product.currentPrice) return true;
+    if (histMin != null && absoluteTarget < histMin * 0.85) return true;
+    const dropPct =
+      ((product.currentPrice - absoluteTarget) / product.currentPrice) * 100;
+    return dropPct >= 40;
+  }, [absoluteTarget, product.currentPrice, histMin]);
 
   if (!open) return null;
 
-  // --- FASE 8.4 — UI simplificada para a página de produto ---
   if (variant === "product") {
     const saveProduct = async () => {
       if (saving) return;
+      if (status !== "authenticated") {
+        window.location.href = `/entrar/?next=${encodeURIComponent(
+          `/p/?id=${encodeURIComponent(product.slug)}`,
+        )}`;
+        return;
+      }
+      if (absoluteTarget == null || !(absoluteTarget > 0)) return;
+
       setSaving(true);
       try {
-        const target =
-          mode === "below_current"
-            ? product.currentPrice
-            : Number(priceTarget || "");
-
-        if (!(target > 0)) return;
-
         const rule = await upsertAlert({
           id: existingId,
           slug: product.slug,
           ean: product.ean,
           productName: product.name,
           imageUrl: product.imageUrl,
-          kind: "price_below",
-          priceTarget: target,
-          percentBelow: null,
+          kind: mode === "percent" ? "percent_below" : "price_below",
+          priceTarget: mode === "price" ? absoluteTarget : absoluteTarget,
+          percentBelow: mode === "percent" ? percentValue : null,
           referencePrice: product.currentPrice,
-          stores: storesAll ? "all" : stores,
-          conditions,
+          stores: "all",
+          conditions: ["NEW"],
           active: true,
           lastTriggeredAt: null,
         });
@@ -153,6 +183,7 @@ export function AlertRuleModal({
         className="fixed inset-0 z-[75] flex items-end justify-center sm:items-center"
         role="dialog"
         aria-modal
+        aria-labelledby="alert-product-title"
       >
         <button
           type="button"
@@ -164,11 +195,14 @@ export function AlertRuleModal({
         <div className="relative z-10 flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl sm:rounded-2xl">
           <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
             <div>
-              <h2 className="font-display text-sm font-semibold text-slate-900">
-                Como queres ser avisado?
+              <h2
+                id="alert-product-title"
+                className="font-display text-sm font-semibold text-slate-900"
+              >
+                Alerta por email
               </h2>
               <p className="mt-0.5 line-clamp-1 text-xs text-slate-500">
-                {product.name} · {formatEUR(product.currentPrice)}
+                {product.name} · agora {formatEUR(product.currentPrice)}
               </p>
             </div>
             <button
@@ -182,80 +216,148 @@ export function AlertRuleModal({
           </div>
 
           <div className="flex-1 space-y-5 overflow-y-auto p-4">
+            {histMin != null ? (
+              <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-600">
+                Mínimo observado neste produto:{" "}
+                <span className="font-semibold text-slate-900">
+                  {formatEUR(histMin)}
+                </span>
+                . Usa isto como referência para um alvo realista.
+              </p>
+            ) : (
+              <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-600">
+                Ainda há pouco histórico neste produto — um alvo muito baixo
+                pode nunca ser atingido.
+              </p>
+            )}
+
             <fieldset className="space-y-2">
               <legend className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                Opções
+                Como defines o alvo
               </legend>
 
               <label
                 className={cn(
                   "flex cursor-pointer items-start gap-2 rounded-xl border px-3 py-2.5 text-sm",
-                  mode === "below_current"
-                    ? "border-sky-300 bg-sky-50"
+                  mode === "percent"
+                    ? "border-[var(--hm-brand,#ff6a1a)] bg-[color-mix(in_srgb,var(--hm-brand,#ff6a1a)_10%,white)]"
                     : "border-slate-200 hover:bg-slate-50",
                 )}
               >
                 <input
                   type="radio"
                   name="alert-mode"
-                  checked={mode === "below_current"}
-                  onChange={() => {
-                    setMode("below_current");
-                    setPriceTarget(
-                      product.currentPrice > 0
-                        ? String(product.currentPrice)
-                        : "",
-                    );
-                  }}
+                  checked={mode === "percent"}
+                  onChange={() => setMode("percent")}
                   className="mt-0.5"
                 />
-                <span>Quando baixar abaixo do preço atual</span>
+                <span>Percentagem de desconto sobre o preço actual</span>
               </label>
 
               <label
                 className={cn(
                   "flex cursor-pointer items-start gap-2 rounded-xl border px-3 py-2.5 text-sm",
-                  mode === "price_specific"
-                    ? "border-sky-300 bg-sky-50"
+                  mode === "price"
+                    ? "border-[var(--hm-brand,#ff6a1a)] bg-[color-mix(in_srgb,var(--hm-brand,#ff6a1a)_10%,white)]"
                     : "border-slate-200 hover:bg-slate-50",
                 )}
               >
                 <input
                   type="radio"
                   name="alert-mode"
-                  checked={mode === "price_specific"}
-                  onChange={() => setMode("price_specific")}
+                  checked={mode === "price"}
+                  onChange={() => setMode("price")}
                   className="mt-0.5"
                 />
-                <span>Quando atingir um preço específico</span>
+                <span>Preço alvo em euros</span>
               </label>
             </fieldset>
 
-            {mode === "price_specific" ? (
+            {mode === "percent" ? (
+              <div className="space-y-2">
+                <label className="block space-y-1 text-sm">
+                  <span className="text-slate-600">Desconto desejado (%)</span>
+                  <Input
+                    inputMode="decimal"
+                    value={percentBelow}
+                    onChange={(e) => setPercentBelow(e.target.value)}
+                    className="h-10"
+                    placeholder="ex.: 10"
+                  />
+                </label>
+                {priceFromPercent != null ? (
+                  <p className="text-sm text-slate-700">
+                    Com{" "}
+                    <span className="font-semibold">{percentValue}%</span> de
+                    desconto sobre {formatEUR(product.currentPrice)}, o alvo
+                    fica em{" "}
+                    <span className="font-semibold text-slate-900">
+                      {formatEUR(priceFromPercent)}
+                    </span>
+                    .
+                  </p>
+                ) : (
+                  <p className="text-sm text-slate-500">
+                    Indica uma percentagem positiva para ver o preço alvo.
+                  </p>
+                )}
+              </div>
+            ) : (
               <label className="block space-y-1 text-sm">
-                <span className="text-slate-600">Preço alvo</span>
+                <span className="text-slate-600">Preço alvo (€)</span>
                 <Input
                   inputMode="decimal"
                   value={priceTarget}
                   onChange={(e) => setPriceTarget(e.target.value)}
                   className="h-10"
+                  placeholder="ex.: 89.90"
                 />
               </label>
-            ) : null}
+            )}
+
+            <div className="space-y-2 rounded-xl border border-slate-200 px-3 py-3 text-sm text-slate-600">
+              <p>
+                Vais receber um email na tua conta Google quando o preço
+                observado atingir{" "}
+                {absoluteTarget != null ? (
+                  <span className="font-semibold text-slate-900">
+                    {formatEUR(absoluteTarget)}
+                  </span>
+                ) : (
+                  "o alvo"
+                )}
+                .
+              </p>
+              {unrealistic ? (
+                <p className="text-amber-800">
+                  Este alvo parece pouco realista face ao preço actual
+                  {histMin != null
+                    ? ` e ao mínimo observado (${formatEUR(histMin)})`
+                    : ""}
+                  . É provável que nunca recebas o email.
+                </p>
+              ) : (
+                <p className="text-xs text-slate-500">
+                  Se o alvo for demasiado baixo, pode nunca ser atingido — o
+                  Lymiar só avisa com preços realmente observados.
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="border-t border-slate-200 p-4">
             <Button
               type="button"
               className="w-full"
-              disabled={saving}
+              disabled={saving || absoluteTarget == null}
               onClick={() => void saveProduct()}
             >
-              Guardar
+              {status === "authenticated"
+                ? existingId
+                  ? "Actualizar alerta"
+                  : "Activar alerta por email"
+                : "Entrar para activar alerta"}
             </Button>
-            <p className="mt-2 text-center text-[11px] text-slate-400">
-              Guardado neste dispositivo. Sync entre contas na FASE 8.
-            </p>
           </div>
         </div>
       </div>
@@ -285,9 +387,7 @@ export function AlertRuleModal({
         imageUrl: product.imageUrl,
         kind,
         priceTarget:
-          kind === "price_below" && priceTarget
-            ? Number(priceTarget)
-            : null,
+          kind === "price_below" && priceTarget ? Number(priceTarget) : null,
         percentBelow:
           kind === "percent_below" && percentBelow
             ? Number(percentBelow)
@@ -306,7 +406,11 @@ export function AlertRuleModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[75] flex items-end justify-center sm:items-center" role="dialog" aria-modal>
+    <div
+      className="fixed inset-0 z-[75] flex items-end justify-center sm:items-center"
+      role="dialog"
+      aria-modal
+    >
       <button
         type="button"
         className="absolute inset-0 bg-slate-900/40"
@@ -452,7 +556,7 @@ export function AlertRuleModal({
             {existingId ? "Actualizar alerta" : "Criar alerta"}
           </Button>
           <p className="mt-2 text-center text-[11px] text-slate-400">
-            Guardado neste dispositivo. Sync entre contas na FASE 8.
+            Recebes email quando o preço observado atingir o alvo.
           </p>
         </div>
       </div>

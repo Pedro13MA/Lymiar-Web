@@ -58,7 +58,7 @@ describe("consumer-decision", () => {
       bestStoreLabel: "Worten",
       bestStoreBuyable: true,
     });
-    expect(v?.title).toBe("Recomendamos esperar");
+    expect(v?.title).toBe("Melhor esperar");
     expect(v?.lines[0]).toBe(humanConsumerReason("PRICE_ELEVATED_VS_HISTORY"));
     expect(v?.lines.some((l) => l.includes("Worten"))).toBe(true);
   });
@@ -99,7 +99,7 @@ describe("consumer-decision", () => {
       bestStoreLabel: "Worten",
       bestStoreBuyable: true,
     });
-    expect(v?.title).toBe("Preço na média — sem sinal claro de compra ou espera");
+    expect(v?.title).toBe("Ainda não sabemos");
     expect(v?.lines[0]).toContain("padrão claro");
   });
 
@@ -122,7 +122,7 @@ describe("consumer-decision", () => {
       bestStoreLabel: "Worten",
       bestStoreBuyable: true,
     });
-    expect(v?.title).toBe("Um mês de radar — o preço ainda não deu sinal claro");
+    expect(v?.title).toBe("Ainda não sabemos");
     expect(v?.lines[0]).toContain("um mês no radar");
     expect(v?.lines.some((l) => l.includes("mudanças"))).toBe(true);
   });

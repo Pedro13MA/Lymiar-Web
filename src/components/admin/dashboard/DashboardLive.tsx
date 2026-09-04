@@ -6,14 +6,11 @@ import { LoadingState } from "@/components/admin/shared";
 import {
   buildLiveMeta,
   fetchAdminMetrics,
+  fetchDashboardCharts,
   metricsToDashboard,
 } from "@/services/admin/metrics";
 import type { DashboardFixture, DashboardLiveMeta } from "@/types/admin";
 
-/**
- * Dashboard vivo — só lê GET /api/admin/metrics (cache).
- * Poll 1s; sem auditorias; stale / indisponível por métrica.
- */
 export function DashboardLive() {
   const [data, setData] = useState<DashboardFixture | null>(null);
   const [liveMeta, setLiveMeta] = useState<DashboardLiveMeta | null>(null);
@@ -27,7 +24,16 @@ export function DashboardLive() {
       try {
         const res = await fetchAdminMetrics();
         if (cancelled) return;
-        setData(metricsToDashboard(res.metrics));
+        const dash = metricsToDashboard(res.metrics);
+        try {
+          const charts = await fetchDashboardCharts();
+          if (!cancelled) {
+            dash.charts = charts;
+          }
+        } catch {
+          /* charts optional */
+        }
+        setData(dash);
         setLiveMeta(buildLiveMeta(res.metrics));
         setError(null);
       } catch (e) {

@@ -1,0 +1,206 @@
+/* Loader anéis — pesquisa / carregamento (adaptado de wifi-loader) */
+
+.wifi-loader {
+  --wifi-front: #ff6a1a;
+  --wifi-back: #c3c8de;
+  --wifi-text: #5b6b7c;
+  width: 64px;
+  height: 64px;
+  border-radius: 50px;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-inline: auto;
+}
+
+.wifi-loader--sm {
+  width: 40px;
+  height: 40px;
+  transform: scale(0.72);
+  transform-origin: center center;
+  margin-bottom: 1.5rem;
+}
+
+.wifi-loader svg {
+  position: absolute;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.wifi-loader svg circle {
+  fill: none;
+  stroke-width: 6px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transform: rotate(-100deg);
+  transform-origin: center;
+}
+
+.wifi-loader__back {
+  stroke: var(--wifi-back);
+}
+
+.wifi-loader__front {
+  stroke: var(--wifi-front);
+}
+
+.wifi-loader__circle-outer {
+  height: 86px;
+  width: 86px;
+}
+
+.wifi-loader__circle-outer circle {
+  stroke-dasharray: 62.75 188.25;
+}
+
+.wifi-loader__circle-outer .wifi-loader__back {
+  animation: wifi-circle-outer 1.8s ease infinite 0.3s;
+}
+
+.wifi-loader__circle-outer .wifi-loader__front {
+  animation: wifi-circle-outer 1.8s ease infinite 0.15s;
+}
+
+.wifi-loader__circle-middle {
+  height: 60px;
+  width: 60px;
+}
+
+.wifi-loader__circle-middle circle {
+  stroke-dasharray: 42.5 127.5;
+}
+
+.wifi-loader__circle-middle .wifi-loader__back {
+  animation: wifi-circle-middle 1.8s ease infinite 0.25s;
+}
+
+.wifi-loader__circle-middle .wifi-loader__front {
+  animation: wifi-circle-middle 1.8s ease infinite 0.1s;
+}
+
+.wifi-loader__circle-inner {
+  height: 34px;
+  width: 34px;
+}
+
+.wifi-loader__circle-inner circle {
+  stroke-dasharray: 22 66;
+}
+
+.wifi-loader__circle-inner .wifi-loader__back {
+  animation: wifi-circle-inner 1.8s ease infinite 0.2s;
+}
+
+.wifi-loader__circle-inner .wifi-loader__front {
+  animation: wifi-circle-inner 1.8s ease infinite 0.05s;
+}
+
+.wifi-loader__text {
+  position: absolute;
+  bottom: -40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-transform: lowercase;
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+
+.wifi-loader__text::before,
+.wifi-loader__text::after {
+  content: attr(data-text);
+}
+
+.wifi-loader__text::before {
+  color: var(--wifi-text);
+}
+
+.wifi-loader__text::after {
+  color: var(--wifi-front);
+  animation: wifi-text-anim 3.6s ease infinite;
+  position: absolute;
+  left: 0;
+}
+
+.wifi-loader-block {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 14rem;
+  padding: 3rem 1rem 4rem;
+}
+
+.wifi-loader-block--compact {
+  min-height: 5rem;
+  padding: 1.75rem 1rem 2.5rem;
+}
+
+@keyframes wifi-circle-outer {
+  0% {
+    stroke-dashoffset: 25;
+  }
+  25% {
+    stroke-dashoffset: 0;
+  }
+  65% {
+    stroke-dashoffset: 301;
+  }
+  80% {
+    stroke-dashoffset: 276;
+  }
+  100% {
+    stroke-dashoffset: 276;
+  }
+}
+
+@keyframes wifi-circle-middle {
+  0% {
+    stroke-dashoffset: 17;
+  }
+  25% {
+    stroke-dashoffset: 0;
+  }
+  65% {
+    stroke-dashoffset: 204;
+  }
+  80% {
+    stroke-dashoffset: 187;
+  }
+  100% {
+    stroke-dashoffset: 187;
+  }
+}
+
+@keyframes wifi-circle-inner {
+  0% {
+    stroke-dashoffset: 9;
+  }
+  25% {
+    stroke-dashoffset: 0;
+  }
+  65% {
+    stroke-dashoffset: 106;
+  }
+  80% {
+    stroke-dashoffset: 97;
+  }
+  100% {
+    stroke-dashoffset: 97;
+  }
+}
+
+@keyframes wifi-text-anim {
+  0% {
+    clip-path: inset(0 100% 0 0);
+  }
+  50% {
+    clip-path: inset(0);
+  }
+  100% {
+    clip-path: inset(0 0 0 100%);
+  }
+}

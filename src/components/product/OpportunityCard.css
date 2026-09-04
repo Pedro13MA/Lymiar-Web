@@ -1,0 +1,284 @@
+/* Product cards — compactas, veredicto bem visível */
+
+.lymiar-product-card {
+  --pc-radius: 16px;
+  --pc-border: #dde3ea;
+  --pc-accent: #8b9aab;
+  --pc-accent-soft: color-mix(in srgb, var(--pc-accent) 22%, transparent);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border-radius: var(--pc-radius);
+  overflow: hidden;
+  background-color: #fff;
+  border: 2px solid var(--pc-border);
+  box-shadow:
+    6px 6px 0 var(--pc-accent-soft),
+    0 1px 0 color-mix(in srgb, var(--pc-accent) 28%, transparent);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.lymiar-product-card:hover {
+  transform: translate(-1px, -1px);
+  box-shadow:
+    8px 8px 0 var(--pc-accent-soft),
+    0 2px 0 color-mix(in srgb, var(--pc-accent) 35%, transparent);
+}
+
+.lymiar-product-card--buy {
+  --pc-border: var(--verdict-buy, #00c853);
+  --pc-accent: var(--verdict-buy, #00c853);
+}
+
+.lymiar-product-card--wait {
+  --pc-border: var(--verdict-wait, #ff6200);
+  --pc-accent: var(--verdict-wait, #ff6200);
+}
+
+.lymiar-product-card--unknown {
+  --pc-border: var(--verdict-unknown, #ffd400);
+  --pc-accent: var(--verdict-unknown, #ffd400);
+}
+
+.lymiar-product-card__link {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.lymiar-product-card__media {
+  position: relative;
+  width: 100%;
+  height: 8.25rem;
+  flex: 0 0 auto;
+  overflow: hidden;
+  background:
+    linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--pc-accent) 12%, #fff8f1) 0%,
+      #f4f6f8 48%,
+      #eef2f6 100%
+    );
+}
+
+.lymiar-product-card__media-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 0.65rem 0.4rem;
+}
+
+.lymiar-product-card__media img {
+  object-fit: contain !important;
+  object-position: center;
+}
+
+.lymiar-product-card__media-fade {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 24%;
+  background: linear-gradient(
+    0deg,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Faixa de decisão — contraste alto */
+.lymiar-product-card__verdict-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.4rem 0.65rem;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+  text-transform: uppercase;
+  color: #fff;
+  background: #64748b;
+}
+
+.lymiar-product-card__verdict-bar--buy {
+  background: var(--verdict-buy, #00c853);
+  color: #fff;
+}
+
+.lymiar-product-card__verdict-bar--wait {
+  background: var(--verdict-wait, #ff6200);
+  color: #fff;
+}
+
+.lymiar-product-card__verdict-bar--unknown {
+  background: var(--verdict-unknown, #ffd400);
+  color: #1a1500;
+}
+
+.lymiar-product-card__body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+  padding: 0.55rem 0.75rem 0.65rem;
+  background: #fff;
+}
+
+.lymiar-product-card__name {
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.1rem;
+  font-size: 0.8rem;
+  font-weight: 650;
+  line-height: 1.3;
+  color: #0b1220;
+}
+
+.lymiar-product-card__price-now {
+  margin: 0;
+  font-family: var(--font-display, inherit);
+  font-size: 1.2rem;
+  font-weight: 750;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: #0b1220;
+}
+
+.lymiar-product-card__range {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+  width: 100%;
+  margin-top: 0.05rem;
+}
+
+.lymiar-product-card__range-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.68rem;
+  color: #64748b;
+}
+
+.lymiar-product-card__range-row strong {
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #334155;
+}
+
+.lymiar-product-card__sep {
+  width: 100%;
+  height: 1px;
+  border-radius: 1px;
+  background: #e9e9e9;
+}
+
+.lymiar-product-card__reason {
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: #5b6b7c;
+}
+
+.lymiar-product-card__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0 0.75rem 0.75rem;
+  background: #fff;
+}
+
+.lymiar-product-card__cta {
+  display: flex;
+  height: 2.1rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: #0f1b2d;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 650;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.lymiar-product-card__cta:hover {
+  background: #1a2740;
+  color: #fff;
+}
+
+html.dkmode .lymiar-product-card {
+  background-color: var(--dk-surface, #111);
+  border-color: color-mix(in srgb, var(--pc-accent) 55%, var(--dk-line, #262626));
+}
+
+html.dkmode .lymiar-product-card__media {
+  background:
+    linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--pc-accent) 14%, #0a0a0a) 0%,
+      #000 48%,
+      #111 100%
+    );
+}
+
+html.dkmode .lymiar-product-card__body,
+html.dkmode .lymiar-product-card__actions {
+  background: var(--dk-surface, #111);
+}
+
+html.dkmode .lymiar-product-card__name,
+html.dkmode .lymiar-product-card__price-now {
+  color: var(--dk-ink, #f5f5f5);
+}
+
+html.dkmode .lymiar-product-card__range-row {
+  color: var(--dk-muted, #a3a3a3);
+}
+
+html.dkmode .lymiar-product-card__range-row strong {
+  color: #d4d4d4;
+}
+
+html.dkmode .lymiar-product-card__sep {
+  background: var(--dk-line, #262626);
+}
+
+html.dkmode .lymiar-product-card__reason {
+  color: var(--dk-muted, #a3a3a3);
+}
+
+html.dkmode .lymiar-product-card__media-fade {
+  background: linear-gradient(
+    0deg,
+    var(--dk-surface, #111) 0%,
+    rgba(17, 17, 17, 0) 100%
+  );
+}

@@ -57,7 +57,8 @@ export function AlertsPageClient() {
             Alertas
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Regras locais neste dispositivo. Avaliação automática na FASE 8.
+            Só o que crias aqui (e no sino 🔔 do produto) gera email. Avaliação
+            automática quando o preço observado atinge o teu alvo.
           </p>
         </div>
 

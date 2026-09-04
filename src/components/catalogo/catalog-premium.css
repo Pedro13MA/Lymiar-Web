@@ -8,15 +8,22 @@
   --hm-brand: #ff6a1a;
   --hm-brand-soft: #fff1e8;
   --hm-brand-deep: #e2550f;
-  --hm-buy: #12b76a;
-  --hm-buy-soft: #ecfdf3;
-  --hm-wait: #f5a524;
-  --hm-wait-soft: #fff8eb;
+  --hm-buy: var(--verdict-buy, #00c853);
+  --hm-buy-soft: var(--verdict-buy-soft, #d7fce6);
+  --hm-wait: var(--verdict-wait, #ff6200);
+  --hm-wait-soft: var(--verdict-wait-soft, #ffe8d6);
+  --hm-unknown: var(--verdict-unknown, #ffd400);
+  --hm-unknown-soft: var(--verdict-unknown-soft, #fff6bf);
   --hm-text: #0b1220;
   --hm-muted: #5b6b7c;
   --hm-faint: #8b9aab;
   --hm-line: #dde3ea;
   --hm-focus: #ff6a1a;
+  --preview-soft: #f4f6f8;
+  --preview-card: #ffffff;
+  --preview-tint: #fff1e8;
+  --preview-buy-soft: #ecfdf3;
+  --preview-wait-soft: #fff8eb;
 
   background: var(--hm-bg);
   color: var(--hm-muted);
@@ -113,7 +120,7 @@
   height: 2.5rem;
   border-radius: 0.75rem;
   border: 1px solid var(--hm-line);
-  background: #fff;
+  background: var(--hm-bg-elevated);
   padding: 0 0.75rem;
   color: var(--hm-ink);
   font-size: 0.875rem;
@@ -122,7 +129,7 @@
 .catalog-premium .catalog-card {
   border-radius: 1rem;
   border: 1px solid var(--hm-line);
-  background: #fff;
+  background: var(--hm-bg-elevated);
   transition: border-color 0.15s ease;
 }
 
@@ -132,12 +139,41 @@
 
 .catalog-premium .catalog-badge-buy {
   background: var(--hm-buy-soft);
-  color: var(--hm-buy);
+  color: var(--verdict-buy-text, #007a33);
+  border: 1px solid var(--verdict-buy-border, #5ef09a);
 }
 
 .catalog-premium .catalog-badge-wait {
   background: var(--hm-wait-soft);
-  color: var(--hm-wait);
+  color: var(--verdict-wait-text, #b34700);
+  border: 1px solid var(--verdict-wait-border, #ff9a4d);
+}
+
+.catalog-premium .catalog-badge-unknown {
+  background: var(--hm-unknown-soft);
+  color: var(--verdict-unknown-text, #8a7000);
+  border: 1px solid var(--verdict-unknown-border, #ffe566);
+}
+
+.catalog-premium .catalog-card-verdict-buy {
+  border-color: var(--verdict-buy-border, #5ef09a);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--hm-buy) 22%, transparent),
+    0 4px 14px color-mix(in srgb, var(--hm-buy) 12%, transparent);
+}
+
+.catalog-premium .catalog-card-verdict-wait {
+  border-color: var(--verdict-wait-border, #ff9a4d);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--hm-wait) 22%, transparent),
+    0 4px 14px color-mix(in srgb, var(--hm-wait) 12%, transparent);
+}
+
+.catalog-premium .catalog-card-verdict-unknown {
+  border-color: var(--verdict-unknown-border, #ffe566);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--hm-unknown) 22%, transparent),
+    0 4px 14px color-mix(in srgb, var(--hm-unknown) 12%, transparent);
 }
 
 .catalog-premium a:focus-visible,
@@ -320,4 +356,54 @@
   .catalog-premium .entrar-unlock {
     animation: none;
   }
+}
+
+/* ——— DKMODE: catálogo + /entrar ——— */
+html.dkmode .catalog-premium {
+  --hm-bg: var(--dk-bg, #000);
+  --hm-bg-soft: var(--dk-surface-2, #171717);
+  --hm-bg-elevated: var(--dk-surface, #111);
+  --hm-ink: var(--dk-ink, #f5f5f5);
+  --hm-text: var(--dk-ink, #f5f5f5);
+  --hm-muted: var(--dk-muted, #a3a3a3);
+  --hm-faint: var(--dk-faint, #737373);
+  --hm-line: var(--dk-line, #262626);
+  --hm-brand-soft: var(--dk-brand-soft, color-mix(in srgb, #ff6a1a 18%, #000));
+  --hm-buy-soft: var(--verdict-buy-soft);
+  --hm-wait-soft: var(--verdict-wait-soft);
+  --hm-unknown-soft: var(--verdict-unknown-soft);
+  --preview-soft: var(--dk-bg-raised, #0a0a0a);
+  --preview-card: var(--dk-surface, #111);
+  --preview-tint: var(--dk-brand-soft);
+  --preview-buy-soft: var(--verdict-buy-soft);
+  --preview-wait-soft: var(--verdict-wait-soft);
+  background: var(--hm-bg) !important;
+  color: var(--hm-muted);
+  color-scheme: dark;
+}
+
+html.dkmode .catalog-premium ::selection {
+  color: var(--dk-ink, #f5f5f5);
+}
+
+html.dkmode .catalog-premium .entrar-shell {
+  background:
+    radial-gradient(70% 50% at 0% 0%, rgba(255, 106, 26, 0.12) 0%, transparent 55%),
+    radial-gradient(50% 40% at 100% 20%, rgba(0, 200, 83, 0.08) 0%, transparent 50%),
+    var(--hm-bg) !important;
+}
+
+html.dkmode .catalog-premium .catalog-panel,
+html.dkmode .catalog-premium .catalog-card,
+html.dkmode .catalog-premium .catalog-filters,
+html.dkmode .catalog-premium .catalog-stat-strip,
+html.dkmode .catalog-premium .catalog-select {
+  background: var(--hm-bg-elevated) !important;
+  border-color: var(--hm-line) !important;
+  color: var(--hm-ink);
+}
+
+html.dkmode .catalog-premium .entrar-feature-icon {
+  background: var(--hm-brand-soft);
+  color: #ffb087;
 }

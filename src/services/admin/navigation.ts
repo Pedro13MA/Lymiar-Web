@@ -7,6 +7,7 @@ import type { AdminNavItem, DashboardFixture } from "@/types/admin";
 export const ADMIN_NAV: AdminNavItem[] = [
   { id: "dashboard", label: "Dashboard", href: "/control-center", icon: "LayoutDashboard" },
   { id: "produtos", label: "Produtos", href: "/control-center/produtos", icon: "Package" },
+  { id: "identidade", label: "Identidade", href: "/control-center/identidade", icon: "Link2" },
   { id: "conhecimento", label: "Conhecimento", href: "/control-center/conhecimento", icon: "Brain" },
   { id: "utilizadores", label: "Utilizadores", href: "/control-center/utilizadores", icon: "Users" },
   { id: "analytics", label: "Analytics", href: "/control-center/analytics", icon: "BarChart3" },
