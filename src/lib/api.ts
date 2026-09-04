@@ -175,6 +175,13 @@ export type SearchIntentPayload = {
   did_you_mean?: string[];
   related_queries?: string[];
   category_redirect?: string | null;
+  rewrite?: {
+    original?: string;
+    cleaned?: string;
+    searchText?: string;
+    corrections?: string[];
+  } | null;
+  fallbackQuery?: string | null;
 };
 
 export type SearchSuggestItem = {

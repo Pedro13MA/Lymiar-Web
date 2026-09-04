@@ -19,28 +19,46 @@ export function SearchEmptyState({
   inferred,
 }: Props) {
   const showHints = isP33SearchEnabled();
+  const primary = didYouMean[0];
   return (
     <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-8 text-center">
-      <p className="text-sm leading-relaxed text-slate-600">
-        Não encontrámos produtos para «{query}» com os filtros actuais.
-      </p>
-      {showHints && didYouMean.length > 0 ? (
-        <p className="mt-4 text-sm text-slate-700">
-          Quis dizer{" "}
-          {didYouMean.map((t, i) => (
-            <span key={t}>
-              {i > 0 ? ", " : null}
-              <Link
-                href={`/search/?q=${encodeURIComponent(t)}`}
-                className="font-medium text-sky-700 underline-offset-2 hover:underline"
-              >
-                {t}
-              </Link>
-            </span>
-          ))}
-          ?
+      {showHints && primary ? (
+        <>
+          <p className="text-sm leading-relaxed text-slate-600">
+            Sem resultados exactos para «{query}».
+          </p>
+          <p className="mt-4 text-base text-slate-800">
+            Quiseste dizer{" "}
+            <Link
+              href={`/search/?q=${encodeURIComponent(primary)}`}
+              className="font-semibold text-sky-700 underline-offset-2 hover:underline"
+            >
+              {primary}
+            </Link>
+            ?
+          </p>
+          {didYouMean.length > 1 ? (
+            <p className="mt-3 text-sm text-slate-600">
+              Ou{" "}
+              {didYouMean.slice(1).map((t, i) => (
+                <span key={t}>
+                  {i > 0 ? ", " : null}
+                  <Link
+                    href={`/search/?q=${encodeURIComponent(t)}`}
+                    className="font-medium text-sky-700 underline-offset-2 hover:underline"
+                  >
+                    {t}
+                  </Link>
+                </span>
+              ))}
+            </p>
+          ) : null}
+        </>
+      ) : (
+        <p className="text-sm leading-relaxed text-slate-600">
+          Não encontrámos produtos para «{query}» com os filtros actuais.
         </p>
-      ) : null}
+      )}
       {showHints && relatedQueries.length > 0 ? (
         <div className="mt-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
@@ -79,9 +97,6 @@ export function SearchEmptyState({
           </Link>
         </p>
       ) : null}
-      <p className="mt-4 text-xs text-slate-500">
-        Experimenta outro termo, limpa os filtros, ou volta mais tarde.
-      </p>
     </div>
   );
 }

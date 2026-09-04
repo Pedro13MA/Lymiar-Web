@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { OpportunityCard } from "@/components/product/OpportunityCard";
@@ -150,6 +150,7 @@ export function SearchPageClient() {
   const [error, setError] = useState<string | null>(null);
   const [minDraft, setMinDraft] = useState(filters.minPrice);
   const [maxDraft, setMaxDraft] = useState(filters.maxPrice);
+  const autoCorrectRef = useRef<string | null>(null);
 
   useEffect(() => {
     setMinDraft(filters.minPrice);
@@ -281,6 +282,24 @@ export function SearchPageClient() {
         setDidYouMean(res.didYouMean ?? []);
         setRelatedQueries(res.relatedQueries ?? []);
         setCategoryRedirect(res.categoryRedirect ?? null);
+        // Se ainda vazio mas há correção — redirecionar uma vez (nunca ficar em beco sem saída)
+        if (
+          mapped.length === 0 &&
+          (res.didYouMean?.length ?? 0) > 0
+        ) {
+          const nextQ = (res.didYouMean?.[0] || "").trim();
+          if (
+            nextQ &&
+            nextQ.toLowerCase() !== q.toLowerCase() &&
+            autoCorrectRef.current !== `${q}→${nextQ}`
+          ) {
+            autoCorrectRef.current = `${q}→${nextQ}`;
+            router.replace(
+              `/search/?q=${encodeURIComponent(nextQ)}`,
+            );
+            return;
+          }
+        }
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             apiClient.markRenderForLabel(
@@ -314,6 +333,15 @@ export function SearchPageClient() {
     // queryKey / filtersKey / taxonomyKey: strings estáveis (evita cancel loop)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- filters/taxonomy derivados das keys
   }, [q, filtersKey, taxonomyKey]);
+
+  const correctedSearch =
+    intent?.rewrite?.searchText?.trim() ||
+    intent?.fallbackQuery?.trim() ||
+    "";
+  const showingForCorrection =
+    Boolean(correctedSearch) &&
+    correctedSearch.toLowerCase() !== q.toLowerCase() &&
+    products.length > 0;
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -459,9 +487,17 @@ export function SearchPageClient() {
               </span>
             </Link>
           ) : null}
+          {showingForCorrection ? (
+            <div className="mb-4 rounded-xl border border-[var(--hm-brand)]/20 bg-[var(--hm-brand-soft)]/50 px-4 py-3 text-sm text-[var(--hm-ink)]">
+              A mostrar resultados para «
+              <span className="font-semibold">{correctedSearch}</span>».
+              Pesquisaste «{q}».
+            </div>
+          ) : null}
           {isP33SearchEnabled() &&
           (didYouMean.length > 0 || relatedQueries.length > 0) &&
-          products.length > 0 ? (
+          products.length > 0 &&
+          !showingForCorrection ? (
             <div className="mb-4 flex flex-wrap items-center gap-2 text-sm text-[var(--hm-muted)]">
               {didYouMean.length > 0 ? (
                 <span>

@@ -80,7 +80,7 @@ export function SearchTypeahead({
         .finally(() => {
           if (!controller.signal.aborted) setLoading(false);
         });
-    }, 280);
+    }, 140);
     return () => {
       window.clearTimeout(handle);
       abortRef.current?.abort();
