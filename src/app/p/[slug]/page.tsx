@@ -11,11 +11,16 @@ type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
+/** Static export paths cannot contain Windows-illegal chars (`:` in LMSKU ids). */
+function isExportableSlug(slug: string): boolean {
+  return Boolean(slug) && !/[:*?"<>|\\]/.test(slug);
+}
+
 export async function generateStaticParams() {
   const slugs = new Set<string>();
   for (const p of MOCK_PRODUCTS) {
-    slugs.add(p.slug);
-    slugs.add(p.ean);
+    if (isExportableSlug(p.slug)) slugs.add(p.slug);
+    if (isExportableSlug(p.ean)) slugs.add(p.ean);
   }
   try {
     const [now, wait] = await Promise.all([
@@ -23,8 +28,8 @@ export async function generateStaticParams() {
       getDealsWait(50),
     ]);
     for (const r of [...now.results, ...wait.results]) {
-      slugs.add(r.slug);
-      slugs.add(r.ean);
+      if (isExportableSlug(r.slug)) slugs.add(r.slug);
+      if (isExportableSlug(r.ean)) slugs.add(r.ean);
     }
   } catch {
     // Build sem API — mantém mocks

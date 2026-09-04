@@ -38,6 +38,11 @@ export {
 
 const inflight = new Map<string, Promise<unknown>>();
 
+/** Browser: always fresh. Build/SSR: force-cache so static export stays static. */
+function fetchCacheMode(): RequestCache {
+  return typeof window === "undefined" ? "force-cache" : "no-store";
+}
+
 function mergeAbortSignals(
   ...signals: (AbortSignal | undefined)[]
 ): AbortSignal | undefined {
@@ -168,7 +173,7 @@ async function executeFetch<T>(
       body: opts?.body != null ? JSON.stringify(opts.body) : undefined,
       signal,
       credentials: opts?.credentials,
-      cache: "no-store",
+      cache: fetchCacheMode(),
     });
 
     networkMs = performance.now() - t0;
@@ -519,7 +524,7 @@ export async function apiFetchRaw(
     const res = await fetch(url, {
       ...init,
       signal,
-      cache: "no-store",
+      cache: fetchCacheMode(),
     });
 
     const networkMs = performance.now() - t0;

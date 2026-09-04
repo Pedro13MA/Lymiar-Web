@@ -285,12 +285,12 @@ function AuthenticatedMinhaArea() {
           <ul className="divide-y divide-[var(--hm-line)] overflow-hidden rounded-xl border border-[var(--hm-line)] bg-white">
             {watches.slice(0, 8).map((w) => (
               <li
-                key={`${w.kind}:${w.targetKey}`}
+                key={`${w.kind}:${w.target.key}`}
                 className="flex items-center justify-between gap-3 px-4 py-3"
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-[var(--hm-ink)]">
-                    {w.label || w.targetKey}
+                    {w.target.label || w.target.key}
                   </p>
                   <p className="text-xs text-[var(--hm-faint)]">
                     {WATCH_KIND_LABEL[w.kind] || w.kind}
@@ -299,7 +299,7 @@ function AuthenticatedMinhaArea() {
                 <button
                   type="button"
                   className="shrink-0 text-xs font-medium text-[var(--hm-muted)] hover:text-[var(--hm-ink)]"
-                  onClick={() => void unfollow(w.kind, w.targetKey).then(reload)}
+                  onClick={() => void unfollow(w.kind, w.target.key).then(reload)}
                 >
                   Deixar
                 </button>
