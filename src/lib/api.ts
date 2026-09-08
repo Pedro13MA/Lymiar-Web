@@ -72,6 +72,7 @@ export type ApiProductSummary = {
   realDiscountPct?: number | null;
   promotionConfidence?: number | null;
   dealScore?: number | null;
+  priceObservedAt?: string | null;
   consumerDecision?: {
     verdict: string;
     confidence: number;
@@ -266,6 +267,8 @@ export type CategoryChild = {
   parent?: string | null;
   is_active?: boolean;
   children_count?: number;
+  /** Canonical category URL when API provides it. */
+  path?: string | null;
 };
 
 export type CategorySummary = {
@@ -287,6 +290,7 @@ export type CategoryDetail = {
   parent?: string | null;
   level: number;
   is_active: boolean;
+  path?: string | null;
   taxonomy_path: string[];
   breadcrumbs: CategoryBreadcrumb[];
   children: CategoryChild[];
@@ -381,6 +385,7 @@ export type ApiOffer = {
   paymentMethods?: ApiPaymentMethod[];
   shippingInfo?: ApiShippingInfo | string | null;
   smartBasketOpportunity?: boolean;
+  observedAt?: string | null;
 };
 
 export type ApiProductDetail = {
@@ -395,6 +400,7 @@ export type ApiProductDetail = {
   currency?: string;
   currentPrice: number;
   effectivePrice?: number | null;
+  priceObservedAt?: string | null;
   avg30d?: number | null;
   historicalMin?: number | null;
   historicalMax?: number | null;
@@ -731,6 +737,7 @@ export function summaryToProduct(s: ApiProductSummary): Product {
         : s.taxonomy_path ?? undefined,
     imageUrl: s.imageUrl,
     currentPrice: s.currentPrice,
+    priceObservedAt: s.priceObservedAt ?? undefined,
     listPrice: s.listPrice ?? undefined,
     effectivePrice: s.effectivePrice ?? undefined,
     savings: s.savings ?? undefined,
@@ -886,11 +893,14 @@ export function detailToProduct(d: ApiProductDetail): Product {
     shippingInfo: formatShippingInfo(o.shipping_info ?? o.shippingInfo),
     shippingDetails: mapShippingDetails(o.shipping_info ?? o.shippingInfo),
     smartBasketOpportunity: Boolean(o.smartBasketOpportunity),
+    observedAt: o.observedAt ?? null,
   }));
   const listPrice = d.currentPrice;
   const effectivePrice = null;
   const buyableOffer = pickBestBuyableOffer(offers);
+  // Listagem OOS pode aparecer nas lojas; currentPrice de decisão/gráfico = só comprável.
   const displayPrice = buyableOffer?.price ?? listPrice;
+  const statsPrice = buyableOffer?.price ?? null;
   const bestOffer =
     offers.length > 0
       ? [...offers].sort((a, b) => a.price - b.price)[0]
@@ -915,9 +925,15 @@ export function detailToProduct(d: ApiProductDetail): Product {
     listPrice,
     effectivePrice,
     currentPrice: displayPrice,
-    avg30d: d.avg30d ?? displayPrice,
-    historicalMin: d.historicalMin ?? displayPrice,
-    historicalMax: d.historicalMax ?? displayPrice,
+    priceObservedAt:
+      d.priceObservedAt ??
+      buyableOffer?.observedAt ??
+      bestOffer?.observedAt ??
+      null,
+    avg30d: d.avg30d ?? statsPrice ?? displayPrice,
+    // Nunca inventar min/máx a partir de listagem esgotada.
+    historicalMin: d.historicalMin ?? statsPrice ?? 0,
+    historicalMax: d.historicalMax ?? statsPrice ?? 0,
     dropTodayPct: d.dropTodayPct ?? undefined,
     history: d.history || [],
     offers,
@@ -1238,6 +1254,34 @@ export async function getDealsFair(
   );
   if (!data) return { count: 0, results: [] };
   return data;
+}
+
+export type DealsRadarResponse = {
+  items?: ApiProductSummary[];
+  buy: ApiProductSummary[];
+  wait: ApiProductSummary[];
+  unknown: ApiProductSummary[];
+  dayKey?: string;
+  rotationSlot?: number;
+  cacheTtlSec?: number;
+  countBuy?: number;
+  countWait?: number;
+  countUnknown?: number;
+};
+
+/** Homepage radar — um único round-trip (pack diário + decisões). */
+export async function getDealsRadar(
+  limitEach = 20,
+  opts?: { signal?: AbortSignal },
+): Promise<DealsRadarResponse | null> {
+  return apiGet<DealsRadarResponse | null>(
+    `/api/v1/deals/radar?limit_each=${limitEach}`,
+    {
+      signal: opts?.signal,
+      label: "DEALS_RADAR",
+      allowStatuses: [404],
+    },
+  );
 }
 
 /** Alertas efetivamente enviados ao Telegram (ledger de publish confirmado). */

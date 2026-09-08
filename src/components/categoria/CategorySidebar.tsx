@@ -33,7 +33,7 @@ function NodeList({
         return (
           <li key={node.slug}>
             <Link
-              href={`/categoria/${node.slug}/`}
+              href={node.path || `/categoria/${node.slug}/`}
               className={cn(
                 "block truncate rounded-lg px-2 py-1.5 text-sm transition-colors",
                 active

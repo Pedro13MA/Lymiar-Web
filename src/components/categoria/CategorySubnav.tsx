@@ -26,7 +26,7 @@ export function CategorySubnav({ activeSlug, nodes, label = "Explorar" }: Props)
         return (
           <Link
             key={node.slug}
-            href={`/categoria/${node.slug}/`}
+            href={node.path || `/categoria/${node.slug}/`}
             className={cn(
               "rounded-full border px-3 py-1.5 text-sm transition-colors",
               active
