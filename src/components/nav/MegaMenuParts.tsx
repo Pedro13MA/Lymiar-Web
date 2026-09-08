@@ -16,21 +16,21 @@ function GroupBlock({
   onNavigate?: () => void;
 }) {
   return (
-    <div className="min-w-0">
+    <section className="min-w-0 break-inside-avoid">
       <Link
         href={group.href}
         onClick={onNavigate}
-        className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400 transition-colors hover:text-slate-700"
+        className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.07em] text-slate-400 transition-colors hover:text-slate-700"
       >
         {group.title}
       </Link>
-      <ul className="mt-2.5 grid gap-0.5">
+      <ul className="space-y-0.5">
         {group.items.map((item) => (
           <li key={item.slug}>
             <Link
               href={item.href}
               onClick={onNavigate}
-              className={`block rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-slate-50 hover:text-[var(--hm-brand-deep,#e2550f)] ${
+              className={`block rounded-lg px-2 py-1.5 text-sm leading-snug transition-colors hover:bg-orange-50 hover:text-[var(--hm-brand-deep,#e2550f)] ${
                 item.popular
                   ? "font-medium text-slate-800"
                   : "text-slate-600"
@@ -41,7 +41,7 @@ function GroupBlock({
           </li>
         ))}
       </ul>
-    </div>
+    </section>
   );
 }
 
@@ -60,20 +60,21 @@ export function MegaMenuColumn({ column, onNavigate }: Props) {
         ];
 
   return (
-    <div className="min-w-0 flex-1">
-      <div className="mb-4 flex items-baseline gap-2">
-        <span className="text-lg leading-none" aria-hidden>
+    <div className="min-w-0">
+      <div className="mb-5 flex items-center gap-2 border-b border-slate-100 pb-3">
+        <span className="text-xl leading-none" aria-hidden>
           {column.emoji}
         </span>
         <Link
           href={column.href}
           onClick={onNavigate}
-          className="font-display text-[15px] font-semibold tracking-tight text-slate-900 transition-colors hover:text-[var(--hm-brand-deep,#e2550f)]"
+          className="font-display text-base font-semibold tracking-tight text-slate-900 transition-colors hover:text-[var(--hm-brand-deep,#e2550f)]"
         >
           {column.label}
         </Link>
       </div>
-      <div className="grid grid-cols-1 gap-x-8 gap-y-7 sm:grid-cols-2 xl:grid-cols-3">
+      {/* Stable 2-col grid — avoids wrap/orphan breaks from CSS columns */}
+      <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2">
         {groups.map((group) => (
           <GroupBlock key={group.slug} group={group} onNavigate={onNavigate} />
         ))}
@@ -121,17 +122,17 @@ export function MegaMenuBrands({
 }) {
   if (!brands.length) return null;
   return (
-    <div className="min-w-[9rem] shrink-0">
+    <div className="border-t border-slate-100 pt-4">
       <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
         Marcas
       </p>
-      <ul className="mt-3 flex flex-wrap gap-1.5">
+      <ul className="mt-2.5 flex flex-wrap gap-2">
         {brands.map((b) => (
           <li key={b.label}>
             <Link
               href={b.href}
               onClick={onNavigate}
-              className="inline-block rounded-full border border-slate-200/90 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:border-orange-200 hover:bg-orange-50 hover:text-[var(--hm-brand-deep,#e2550f)]"
+              className="inline-block rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:border-orange-200 hover:bg-orange-50 hover:text-[var(--hm-brand-deep,#e2550f)]"
             >
               {b.label}
             </Link>
