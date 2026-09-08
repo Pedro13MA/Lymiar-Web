@@ -29,16 +29,14 @@ export function SiteHeaderP32() {
         </Link>
 
         <nav
-          className="hidden shrink-0 items-center gap-3 lg:flex"
+          className="flex shrink-0 items-center gap-3"
           aria-label="Principal"
         >
-          <div className="relative">
-            <MegaMenuTrigger
-              id={triggerId}
-              open={menuOpen}
-              onOpenChange={setMenuOpen}
-            />
-          </div>
+          <MegaMenuTrigger
+            id={triggerId}
+            open={menuOpen}
+            onOpenChange={setMenuOpen}
+          />
         </nav>
 
         <div

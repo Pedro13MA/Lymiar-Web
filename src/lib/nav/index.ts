@@ -13,6 +13,7 @@ export {
 export type {
   BreadcrumbItem,
   MegaMenuModel,
+  NavGroup,
   NavL1Column,
   NavLinkItem,
   TaxonomyTreeNode,

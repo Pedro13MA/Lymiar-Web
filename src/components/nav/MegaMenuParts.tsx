@@ -1,68 +1,83 @@
 "use client";
 
 import Link from "next/link";
-import type { NavL1Column, NavLinkItem } from "@/lib/nav/types";
+import type { NavGroup, NavL1Column, NavLinkItem } from "@/lib/nav/types";
 
 type Props = {
   column: NavL1Column;
   onNavigate?: () => void;
 };
 
-export function MegaMenuColumn({ column, onNavigate }: Props) {
+function GroupBlock({
+  group,
+  onNavigate,
+}: {
+  group: NavGroup;
+  onNavigate?: () => void;
+}) {
   return (
-    <div className="min-w-[12rem] flex-1">
+    <div className="min-w-0">
       <Link
-        href={column.href}
+        href={group.href}
         onClick={onNavigate}
-        className="font-display text-[15px] font-semibold tracking-tight text-slate-900 transition-colors hover:text-sky-700"
+        className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400 transition-colors hover:text-slate-700"
       >
-        {column.label}
+        {group.title}
       </Link>
-      <ul className="mt-3.5 grid gap-1">
-        {column.items.map((item) => (
+      <ul className="mt-2.5 grid gap-0.5">
+        {group.items.map((item) => (
           <li key={item.slug}>
             <Link
               href={item.href}
               onClick={onNavigate}
-              className={`group flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-slate-50 hover:text-sky-700 ${
+              className={`block rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-slate-50 hover:text-[var(--hm-brand-deep,#e2550f)] ${
                 item.popular
                   ? "font-medium text-slate-800"
                   : "text-slate-600"
               }`}
             >
-              {item.popular ? (
-                <span
-                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-500/80"
-                  aria-hidden
-                />
-              ) : (
-                <span className="w-1.5 shrink-0" aria-hidden />
-              )}
-              <span>{item.label}</span>
+              {item.label}
             </Link>
           </li>
         ))}
       </ul>
-      {column.seeAll ? (
+    </div>
+  );
+}
+
+/** Full subcategory map for a column — all groups, no "ver tudo". */
+export function MegaMenuColumn({ column, onNavigate }: Props) {
+  const groups =
+    column.groups?.length > 0
+      ? column.groups
+      : [
+          {
+            title: column.label,
+            slug: column.anchorSlug,
+            href: column.href,
+            items: column.items,
+          } satisfies NavGroup,
+        ];
+
+  return (
+    <div className="min-w-0 flex-1">
+      <div className="mb-4 flex items-baseline gap-2">
+        <span className="text-lg leading-none" aria-hidden>
+          {column.emoji}
+        </span>
         <Link
-          href={column.seeAll.href}
+          href={column.href}
           onClick={onNavigate}
-          className="mt-4 inline-flex items-center text-xs font-semibold text-sky-700 transition-colors hover:text-sky-800"
+          className="font-display text-[15px] font-semibold tracking-tight text-slate-900 transition-colors hover:text-[var(--hm-brand-deep,#e2550f)]"
         >
-          {column.seeAll.label}
-          <span className="ml-1" aria-hidden>→</span>
+          {column.label}
         </Link>
-      ) : null}
-      {column.secondarySeeAll ? (
-        <Link
-          href={column.secondarySeeAll.href}
-          onClick={onNavigate}
-          className="mt-2 inline-flex items-center text-xs font-semibold text-sky-700 transition-colors hover:text-sky-800"
-        >
-          {column.secondarySeeAll.label}
-          <span className="ml-1" aria-hidden>→</span>
-        </Link>
-      ) : null}
+      </div>
+      <div className="grid grid-cols-1 gap-x-8 gap-y-7 sm:grid-cols-2 xl:grid-cols-3">
+        {groups.map((group) => (
+          <GroupBlock key={group.slug} group={group} onNavigate={onNavigate} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -106,7 +121,7 @@ export function MegaMenuBrands({
 }) {
   if (!brands.length) return null;
   return (
-    <div className="min-w-[9rem] shrink-0 border-l border-slate-200/80 pl-5">
+    <div className="min-w-[9rem] shrink-0">
       <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
         Marcas
       </p>
@@ -116,7 +131,7 @@ export function MegaMenuBrands({
             <Link
               href={b.href}
               onClick={onNavigate}
-              className="inline-block rounded-full border border-slate-200/90 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:border-sky-200 hover:bg-sky-50 hover:text-sky-800"
+              className="inline-block rounded-full border border-slate-200/90 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:border-orange-200 hover:bg-orange-50 hover:text-[var(--hm-brand-deep,#e2550f)]"
             >
               {b.label}
             </Link>

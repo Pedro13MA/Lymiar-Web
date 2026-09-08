@@ -24,17 +24,24 @@ export type NavLinkItem = {
   level?: "L1" | "L2" | "leaf";
 };
 
+export type NavGroup = {
+  title: string;
+  slug: string;
+  href: string;
+  items: NavLinkItem[];
+};
+
 export type NavL1Column = {
   id: string;
   label: string;
+  emoji: string;
   href: string;
   anchorSlug: string;
+  /** Flat list (popular-first) for quick links / legacy consumers. */
   items: NavLinkItem[];
-  seeAll?: NavLinkItem;
-  /** Optional second explore link (e.g. Acessórios under Telemóveis). */
-  secondarySeeAll?: NavLinkItem;
+  /** Full L2 → L3 map — primary megamenu body (scroll, no "ver tudo"). */
+  groups: NavGroup[];
   brands: { label: string; href: string }[];
-  groups?: { title: string; items: NavLinkItem[] }[];
 };
 
 export type MegaMenuModel = {

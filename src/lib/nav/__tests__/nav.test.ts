@@ -99,9 +99,19 @@ describe("buildMegaMenuFromTree", () => {
     expect(menu.columns.length).toBeGreaterThan(0);
     const comp = menu.columns.find((c) => c.id === "componentes");
     expect(comp?.items.some((i) => i.slug === "ssd")).toBe(true);
+    expect(comp?.emoji).toBe("🧩");
     const wear = menu.columns.find((c) => c.id === "wearables");
     // wearables L2 absent in sample, but smartwatch leaf exists → column via shortcuts
     expect(wear?.items.some((i) => i.slug === "smartwatch")).toBe(true);
+  });
+
+  it("exposes all L3 leaves in scrollable groups (no truncated see-all)", () => {
+    const menu = buildMegaMenuFromTree(sampleTree, "1.1");
+    const comp = menu.columns.find((c) => c.id === "componentes");
+    expect(comp?.groups.length).toBeGreaterThan(0);
+    const leafSlugs = comp?.groups.flatMap((g) => g.items.map((i) => i.slug)) ?? [];
+    expect(leafSlugs).toEqual(expect.arrayContaining(["ssd", "gpu"]));
+    expect(comp).not.toHaveProperty("seeAll");
   });
 
   it("indexes tree by slug", () => {

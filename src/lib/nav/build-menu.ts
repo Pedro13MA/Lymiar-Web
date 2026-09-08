@@ -5,10 +5,21 @@ import {
 } from "@/lib/nav/elevation";
 import type {
   MegaMenuModel,
+  NavGroup,
   NavL1Column,
   NavLinkItem,
   TaxonomyTreeNode,
 } from "@/lib/nav/types";
+
+/** Dump / honesty queue leaves — not shown as shoppable nav destinations. */
+const HIDDEN_LEAF_SLUGS = new Set([
+  "unclassified",
+  "non_catalog",
+  "phone_accessory_other",
+  "peripherals_other",
+  "components_other",
+  "casa_other",
+]);
 
 function categoryHref(slug: string): string {
   return `/categoria/${slug}/`;
@@ -48,16 +59,120 @@ function linkFromNode(n: TaxonomyTreeNode, popular?: boolean): NavLinkItem {
   };
 }
 
+function isHiddenLeaf(n: TaxonomyTreeNode): boolean {
+  if (HIDDEN_LEAF_SLUGS.has(n.slug)) return true;
+  if (n.slug.endsWith("_other") && n.level >= 3) return true;
+  return n.is_active === false;
+}
+
 function collectLeavesUnder(node: TaxonomyTreeNode): TaxonomyTreeNode[] {
   if (!node.children?.length) {
-    return node.level >= 3 ? [node] : [];
+    return node.level >= 3 && !isHiddenLeaf(node) ? [node] : [];
   }
   const out: TaxonomyTreeNode[] = [];
   for (const c of node.children) {
-    if (!c.children?.length && c.level >= 3) out.push(c);
-    else out.push(...collectLeavesUnder(c));
+    if (!c.children?.length && c.level >= 3) {
+      if (!isHiddenLeaf(c)) out.push(c);
+    } else {
+      out.push(...collectLeavesUnder(c));
+    }
   }
   return out;
+}
+
+function orderLeaves(
+  leaves: TaxonomyTreeNode[],
+  preferred: string[],
+): TaxonomyTreeNode[] {
+  const bySlug = new Map(leaves.map((l) => [l.slug, l]));
+  const ordered: TaxonomyTreeNode[] = [];
+  const seen = new Set<string>();
+  for (const slug of preferred) {
+    const n = bySlug.get(slug);
+    if (n && !seen.has(n.slug)) {
+      seen.add(n.slug);
+      ordered.push(n);
+    }
+  }
+  for (const n of leaves) {
+    if (!seen.has(n.slug)) {
+      seen.add(n.slug);
+      ordered.push(n);
+    }
+  }
+  return ordered;
+}
+
+function resolveGroupNodes(
+  spec: NavElevationSpec,
+  anchor: TaxonomyTreeNode | undefined,
+  bySlug: Map<string, TaxonomyTreeNode>,
+): TaxonomyTreeNode[] {
+  if (spec.groupSlugs?.length) {
+    return spec.groupSlugs
+      .map((slug) => bySlug.get(slug))
+      .filter((n): n is TaxonomyTreeNode => Boolean(n));
+  }
+
+  if (!anchor) return [];
+
+  // Elevated L2 hub (e.g. componentes, wearables): one group = itself.
+  if (anchor.level === 2) {
+    return [anchor];
+  }
+
+  const ownAnchors = new Set(
+    NAV_ELEVATION.filter((e) => e.id !== spec.id).map((e) => e.anchorSlug),
+  );
+
+  return (anchor.children || []).filter((c) => {
+    if (c.is_active === false) return false;
+    if (ownAnchors.has(c.slug)) return false;
+    return Boolean(c.children?.length) || c.level === 2;
+  });
+}
+
+function buildGroups(
+  spec: NavElevationSpec,
+  bySlug: Map<string, TaxonomyTreeNode>,
+): NavGroup[] {
+  const anchor = bySlug.get(spec.anchorSlug);
+  const groupNodes = resolveGroupNodes(spec, anchor, bySlug);
+  const popularSet = new Set(spec.leafShortcuts.slice(0, 6));
+  const groups: NavGroup[] = [];
+
+  for (const g of groupNodes) {
+    const leaves = orderLeaves(collectLeavesUnder(g), spec.leafShortcuts);
+    if (!leaves.length) continue;
+    groups.push({
+      title: g.display_name,
+      slug: g.slug,
+      href: categoryHref(g.slug),
+      items: leaves.map((n) => linkFromNode(n, popularSet.has(n.slug))),
+    });
+  }
+
+  // Fallback: shortcuts only when tree groups missing (partial API tree).
+  if (!groups.length) {
+    const items: NavLinkItem[] = [];
+    const seen = new Set<string>();
+    for (const slug of spec.leafShortcuts) {
+      const n = bySlug.get(slug);
+      if (!n || seen.has(n.slug) || isHiddenLeaf(n)) continue;
+      seen.add(n.slug);
+      items.push(linkFromNode(n, popularSet.has(n.slug)));
+    }
+    if (items.length) {
+      groups.push({
+        title: spec.label,
+        slug: spec.anchorSlug,
+        href: categoryHref(spec.anchorSlug),
+        items,
+      });
+    }
+  }
+
+  return groups;
 }
 
 function buildColumn(
@@ -65,63 +180,42 @@ function buildColumn(
   bySlug: Map<string, TaxonomyTreeNode>,
 ): NavL1Column | null {
   const anchor = bySlug.get(spec.anchorSlug);
+  const groups = buildGroups(spec, bySlug);
+  if (!groups.length && !anchor) return null;
+
   const items: NavLinkItem[] = [];
   const seen = new Set<string>();
-
-  const push = (n: TaxonomyTreeNode | undefined, popular?: boolean) => {
-    if (!n || seen.has(n.slug)) return;
-    // Never duplicate the column hub label as a child link
-    if (n.slug === spec.anchorSlug && n.display_name === spec.label) return;
-    seen.add(n.slug);
-    items.push(linkFromNode(n, popular));
-  };
-
-  const popularSet = new Set(spec.leafShortcuts.slice(0, 4));
-  for (const slug of spec.leafShortcuts) {
-    push(bySlug.get(slug), popularSet.has(slug));
-  }
-
-  if (!items.length && anchor?.children?.length) {
-    for (const c of anchor.children.slice(0, 8)) {
-      push(c);
+  for (const g of groups) {
+    for (const item of g.items) {
+      if (seen.has(item.slug)) continue;
+      seen.add(item.slug);
+      items.push(item);
     }
   }
 
-  if (!items.length && !anchor) return null;
+  // Prefer shortcut order for flat items list.
+  const preferred = orderLeaves(
+    items
+      .map((i) => bySlug.get(i.slug))
+      .filter((n): n is TaxonomyTreeNode => Boolean(n)),
+    spec.leafShortcuts,
+  ).map((n) => linkFromNode(n, spec.leafShortcuts.slice(0, 6).includes(n.slug)));
 
-  const hubSlug = anchor?.slug || items[0]?.slug;
+  const hubSlug = anchor?.slug || groups[0]?.slug || preferred[0]?.slug;
   if (!hubSlug) return null;
 
   const primaryLeaf =
-    items.find((i) => i.level === "leaf")?.slug ||
+    preferred.find((i) => i.level === "leaf")?.slug ||
     spec.leafShortcuts.find((s) => (bySlug.get(s)?.level ?? 0) >= 3);
-
-  let secondarySeeAll: NavLinkItem | undefined;
-  if (spec.secondarySeeAll) {
-    const sec = bySlug.get(spec.secondarySeeAll.slug);
-    if (sec) {
-      secondarySeeAll = {
-        label: spec.secondarySeeAll.label,
-        slug: sec.slug,
-        href: categoryHref(sec.slug),
-        level: sec.level === 1 ? "L1" : sec.level === 2 ? "L2" : "leaf",
-      };
-    }
-  }
 
   return {
     id: spec.id,
     label: spec.label,
+    emoji: spec.emoji,
     href: categoryHref(hubSlug),
     anchorSlug: hubSlug,
-    items: items.slice(0, 14),
-    seeAll: {
-      label: `Explorar ${spec.label}`,
-      slug: hubSlug,
-      href: categoryHref(hubSlug),
-      level: anchor?.level === 1 ? "L1" : "L2",
-    },
-    secondarySeeAll,
+    items: preferred.length ? preferred : items,
+    groups,
     brands: (spec.brands || []).map((b) => ({
       label: b.label,
       href: brandHref(primaryLeaf, b.brand),

@@ -1,31 +1,47 @@
 /**
- * P3.2 presentation elevation — curated leaf shortcuts per nav column.
- * No preferL2 leaf dumps (avoids duplicate labels and taxonomy noise in UI).
+ * P3.2 presentation elevation — nav columns + emoji labels.
+ * Product assignment SoT remains L3; this is UI composition only.
  */
 
 export type NavElevationSpec = {
   id: string;
   label: string;
+  emoji: string;
   /** Hub slug (L1 or elevated L2). */
   anchorSlug: string;
-  /** Curated leaf slugs — order preserved; must exist in live tree. */
+  /**
+   * Optional explicit L2 group slugs under the hub.
+   * When omitted, all L2 children of the anchor are used
+   * (except anchors that have their own top-level column).
+   */
+  groupSlugs?: string[];
+  /** Preferred leaf order + popular highlighting within groups. */
   leafShortcuts: string[];
   /** Featured brand filters (not categories). */
   brands?: { label: string; brand: string }[];
-  /** Optional second hub link (e.g. L2 acessorios under Telemóveis). */
-  secondarySeeAll?: { label: string; slug: string };
 };
 
 export const NAV_ELEVATION: NavElevationSpec[] = [
   {
     id: "computadores",
     label: "Computadores",
+    emoji: "💻",
     anchorSlug: "informatica",
+    groupSlugs: [
+      "computadores",
+      "monitores",
+      "armazenamento",
+      "perifericos",
+      "redes",
+      "impressao",
+      "software",
+    ],
     leafShortcuts: [
       "laptop",
       "desktop",
       "mini_pc",
       "aio",
+      "workstation",
       "monitor",
       "keyboard",
       "mouse",
@@ -37,6 +53,9 @@ export const NAV_ELEVATION: NavElevationSpec[] = [
       "memory_card",
       "docking_station",
       "laptop_bag",
+      "router",
+      "nas",
+      "os_license",
     ],
     brands: [
       { label: "Apple", brand: "apple" },
@@ -48,6 +67,7 @@ export const NAV_ELEVATION: NavElevationSpec[] = [
   {
     id: "componentes",
     label: "Componentes",
+    emoji: "🧩",
     anchorSlug: "componentes",
     leafShortcuts: [
       "gpu",
@@ -61,6 +81,8 @@ export const NAV_ELEVATION: NavElevationSpec[] = [
       "pc_case",
       "nic",
       "network_switch",
+      "capture_card",
+      "sound_card",
     ],
     brands: [
       { label: "ASUS", brand: "asus" },
@@ -72,7 +94,9 @@ export const NAV_ELEVATION: NavElevationSpec[] = [
   {
     id: "telemoveis",
     label: "Telemóveis",
+    emoji: "📱",
     anchorSlug: "telemoveis",
+    groupSlugs: ["dispositivos", "acessorios"],
     leafShortcuts: [
       "smartphone",
       "tablet",
@@ -85,10 +109,6 @@ export const NAV_ELEVATION: NavElevationSpec[] = [
       "cable",
       "car_mount",
     ],
-    secondarySeeAll: {
-      label: "Explorar Acessórios",
-      slug: "acessorios",
-    },
     brands: [
       { label: "Apple", brand: "apple" },
       { label: "Samsung", brand: "samsung" },
@@ -99,6 +119,7 @@ export const NAV_ELEVATION: NavElevationSpec[] = [
   {
     id: "wearables",
     label: "Wearables",
+    emoji: "⌚",
     anchorSlug: "wearables",
     leafShortcuts: [
       "smartwatch",
@@ -117,14 +138,18 @@ export const NAV_ELEVATION: NavElevationSpec[] = [
   {
     id: "gaming",
     label: "Gaming",
+    emoji: "🎮",
     anchorSlug: "gaming",
     leafShortcuts: [
       "console",
       "handheld_console",
       "vr_headset",
       "game_physical",
+      "game_digital",
       "controller",
       "gaming_chair",
+      "racing_wheel",
+      "sim_racing_rig",
     ],
     brands: [
       { label: "Sony", brand: "sony" },
@@ -135,6 +160,7 @@ export const NAV_ELEVATION: NavElevationSpec[] = [
   {
     id: "tv_audio",
     label: "TV e Áudio",
+    emoji: "📺",
     anchorSlug: "tv_audio",
     leafShortcuts: [
       "tv",
@@ -154,6 +180,7 @@ export const NAV_ELEVATION: NavElevationSpec[] = [
   {
     id: "fotografia",
     label: "Fotografia",
+    emoji: "📷",
     anchorSlug: "fotografia",
     leafShortcuts: [
       "camera",
@@ -175,6 +202,7 @@ export const NAV_ELEVATION: NavElevationSpec[] = [
   {
     id: "smart_home",
     label: "Casa Inteligente",
+    emoji: "🏡",
     anchorSlug: "smart_home",
     leafShortcuts: [
       "security_camera",
@@ -192,7 +220,19 @@ export const NAV_ELEVATION: NavElevationSpec[] = [
   {
     id: "casa",
     label: "Casa & Eletro",
+    emoji: "🏠",
     anchorSlug: "casa",
+    groupSlugs: [
+      "cozinha",
+      "cozinha_utensilios",
+      "limpeza",
+      "limpeza_consumiveis",
+      "clima",
+      "cuidado_roupa",
+      "grandes_eletro",
+      "casa_geral",
+      "animais",
+    ],
     leafShortcuts: [
       "air_fryer",
       "coffee_machine",
@@ -206,6 +246,7 @@ export const NAV_ELEVATION: NavElevationSpec[] = [
       "casa_lighting",
       "furniture",
       "consumer_batteries",
+      "toys_collectibles",
       "personal_care",
     ],
     brands: [
@@ -218,6 +259,7 @@ export const NAV_ELEVATION: NavElevationSpec[] = [
   {
     id: "desporto",
     label: "Desporto",
+    emoji: "🎾",
     anchorSlug: "desporto",
     leafShortcuts: [
       "padel_gear",

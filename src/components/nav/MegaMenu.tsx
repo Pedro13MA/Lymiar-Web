@@ -1,12 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import Link from "next/link";
 import type { MegaMenuModel, NavL1Column } from "@/lib/nav/types";
 import {
   MegaMenuBrands,
   MegaMenuColumn,
-  MegaMenuQuickLinks,
 } from "@/components/nav/MegaMenuParts";
 
 type Props = {
@@ -20,19 +18,10 @@ export function MegaMenu({ model, open, onOpenChange, triggerId }: Props) {
   const panelId = useId();
   const [activeId, setActiveId] = useState(model.columns[0]?.id ?? "");
   const panelRef = useRef<HTMLDivElement>(null);
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   const active: NavL1Column | undefined =
     model.columns.find((c) => c.id === activeId) || model.columns[0];
-
-  const clearClose = () => {
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-  };
-
-  const scheduleClose = () => {
-    clearClose();
-    closeTimer.current = setTimeout(() => onOpenChange(false), 180);
-  };
 
   const close = useCallback(() => onOpenChange(false), [onOpenChange]);
 
@@ -51,40 +40,55 @@ export function MegaMenu({ model, open, onOpenChange, triggerId }: Props) {
 
   useEffect(() => {
     if (!open) return;
-    const onDoc = (e: MouseEvent) => {
-      const t = e.target as Node;
-      if (panelRef.current?.contains(t)) return;
-      if (document.getElementById(triggerId)?.contains(t)) return;
-      close();
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
     };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [open, close, triggerId]);
+  }, [open]);
+
+  // Reset scroll of subcategory panel when switching category.
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    if (typeof el.scrollTo === "function") el.scrollTo({ top: 0 });
+    else el.scrollTop = 0;
+  }, [activeId]);
 
   if (!model.columns.length) return null;
+  if (!open) return null;
 
   return (
-    <div
-      className="absolute left-0 right-0 top-full z-50 hidden lg:block"
-      onMouseEnter={() => {
-        clearClose();
-        onOpenChange(true);
-      }}
-      onMouseLeave={scheduleClose}
-    >
+    <div className="fixed inset-0 z-[60]" role="presentation">
+      <button
+        type="button"
+        aria-label="Fechar categorias"
+        className="absolute inset-0 bg-slate-900/35 backdrop-blur-[2px] transition-opacity"
+        onClick={close}
+      />
+
       <div
         ref={panelRef}
         id={panelId}
-        role="menu"
+        role="dialog"
+        aria-modal="true"
         aria-labelledby={triggerId}
-        hidden={!open}
-        className={`border-b border-slate-200/90 bg-white/98 shadow-[0_16px_40px_-12px_rgba(15,23,42,0.12)] backdrop-blur-sm ${
-          open ? "block" : "hidden"
-        }`}
+        className="absolute left-0 top-0 flex h-full w-full max-w-[min(100vw,52rem)] flex-col bg-white shadow-[8px_0_40px_-12px_rgba(15,23,42,0.28)] sm:top-0"
       >
-        <div className="mx-auto flex max-w-6xl gap-1 px-4 py-4 sm:px-6 lg:max-w-7xl">
+        <div className="flex h-12 shrink-0 items-center justify-between border-b border-slate-200/90 px-4">
+          <p className="text-sm font-semibold text-slate-900">Categorias</p>
+          <button
+            type="button"
+            onClick={close}
+            className="rounded-lg px-2.5 py-1.5 text-sm text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-800"
+          >
+            Fechar
+          </button>
+        </div>
+
+        <div className="flex min-h-0 flex-1">
           <div
-            className="flex shrink-0 flex-col gap-0.5 pr-3"
+            className="flex w-[9.5rem] shrink-0 flex-col gap-0.5 overflow-y-auto border-r border-slate-200/90 bg-slate-50/80 p-2 sm:w-52 sm:p-3"
             role="tablist"
             aria-label="Categorias principais"
           >
@@ -96,42 +100,32 @@ export function MegaMenu({ model, open, onOpenChange, triggerId }: Props) {
                   type="button"
                   role="tab"
                   aria-selected={selected}
-                  className={`rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                  className={`rounded-lg px-2.5 py-2.5 text-left text-sm transition-colors sm:px-3 ${
                     selected
-                      ? "bg-[color-mix(in_srgb,var(--hm-brand,#ff6a1a)_14%,transparent)] font-medium text-[var(--hm-ink,#0b1220)] ring-1 ring-[color-mix(in_srgb,var(--hm-brand,#ff6a1a)_35%,transparent)]"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      ? "bg-white font-medium text-[var(--hm-ink,#0b1220)] shadow-sm ring-1 ring-[color-mix(in_srgb,var(--hm-brand,#ff6a1a)_40%,transparent)]"
+                      : "text-slate-600 hover:bg-white/80 hover:text-slate-900"
                   }`}
-                  onMouseEnter={() => setActiveId(col.id)}
-                  onFocus={() => setActiveId(col.id)}
+                  onClick={() => setActiveId(col.id)}
                 >
+                  <span className="mr-1.5" aria-hidden>
+                    {col.emoji}
+                  </span>
                   {col.label}
                 </button>
               );
             })}
           </div>
 
-          <div className="flex min-w-0 flex-1 gap-5 overflow-x-auto border-l border-slate-200/80 py-1 pl-5">
+          <div
+            ref={listRef}
+            className="min-w-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6"
+          >
             {active ? (
-              <>
+              <div className="flex flex-col gap-8 pb-10">
                 <MegaMenuColumn column={active} onNavigate={close} />
-                <MegaMenuQuickLinks
-                  links={model.quickLinks}
-                  onNavigate={close}
-                />
                 <MegaMenuBrands brands={active.brands} onNavigate={close} />
-              </>
+              </div>
             ) : null}
-          </div>
-        </div>
-        <div className="border-t border-slate-100 bg-gradient-to-b from-slate-50/90 to-slate-50/40">
-          <div className="mx-auto max-w-6xl px-4 py-2.5 sm:px-6 lg:max-w-7xl">
-            <Link
-              href={model.allCategoriesHref}
-              onClick={close}
-              className="text-sm font-medium text-[var(--hm-brand,#ff6a1a)] transition-colors hover:text-[var(--hm-brand-deep,#e2550f)]"
-            >
-              Ver todas as categorias →
-            </Link>
           </div>
         </div>
       </div>
@@ -154,12 +148,14 @@ export function MegaMenuTrigger({
     <button
       id={id}
       type="button"
-      aria-haspopup="menu"
+      aria-haspopup="dialog"
       aria-expanded={open}
-      className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm text-slate-500 transition-colors hover:text-slate-100"
+      className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
       onClick={() => onOpenChange(!open)}
-      onMouseEnter={() => onOpenChange(true)}
     >
+      <span aria-hidden className="text-base leading-none">
+        ⊞
+      </span>
       {label}
       <svg
         width="12"

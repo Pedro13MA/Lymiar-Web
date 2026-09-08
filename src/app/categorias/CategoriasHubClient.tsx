@@ -9,7 +9,6 @@ import { useTaxonomyNavOptional } from "@/components/nav/TaxonomyTreeProvider";
 import {
   MegaMenuBrands,
   MegaMenuColumn,
-  MegaMenuQuickLinks,
 } from "@/components/nav/MegaMenuParts";
 import { CategoryHero } from "@/components/nav/CategoryLayout";
 import type { NavL1Column } from "@/lib/nav/types";
@@ -157,19 +156,20 @@ function P32Hub() {
                         : "text-[var(--hm-muted)] hover:bg-[var(--hm-bg-soft)]"
                     }`}
                     onClick={() => setActiveId(col.id)}
-                    onMouseEnter={() => setActiveId(col.id)}
                   >
+                    <span className="mr-1.5" aria-hidden>
+                      {col.emoji}
+                    </span>
                     {col.label}
                   </button>
                 );
               })}
             </div>
 
-            <div className="min-w-0 flex-1 p-5 sm:p-6">
+            <div className="min-h-[28rem] min-w-0 flex-1 overflow-y-auto p-5 sm:p-6">
               {active ? (
-                <div className="flex flex-col gap-8 sm:flex-row sm:gap-10">
+                <div className="flex flex-col gap-8">
                   <MegaMenuColumn column={active} />
-                  <MegaMenuQuickLinks links={model?.quickLinks ?? []} />
                   <MegaMenuBrands brands={active.brands} />
                 </div>
               ) : null}
