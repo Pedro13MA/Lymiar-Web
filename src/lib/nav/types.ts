@@ -24,33 +24,28 @@ export type NavLinkItem = {
   level?: "L1" | "L2" | "leaf";
 };
 
-export type NavGroup = {
-  title: string;
+/** Single row in the drill-down drawer (L1, L2, L3, or virtual Mais). */
+export type DrillNavNode = {
   slug: string;
-  href: string;
-  items: NavLinkItem[];
-};
-
-export type NavL1Column = {
-  id: string;
   label: string;
-  emoji: string;
   href: string;
-  anchorSlug: string;
-  /** Flat list (popular-first) for quick links / legacy consumers. */
-  items: NavLinkItem[];
-  /** Full L2 → L3 map — primary megamenu body (scroll, no "ver tudo"). */
-  groups: NavGroup[];
-  brands: { label: string; href: string }[];
+  /** Taxonomy level 1–3; 0 = virtual bucket (Mais). */
+  level: number;
+  emoji?: string;
+  hasChildren: boolean;
+  /** Virtual container — not a real taxonomy slug. */
+  isVirtual?: boolean;
+  children: DrillNavNode[];
 };
 
-export type MegaMenuModel = {
-  columns: NavL1Column[];
-  quickLinks: NavLinkItem[];
-  popularFallback: NavLinkItem[];
+export type DrillNavModel = {
+  roots: DrillNavNode[];
   allCategoriesHref: string;
   taxonomyVersion: string | null;
 };
+
+/** @deprecated Use DrillNavModel — kept for gradual call-site migration. */
+export type MegaMenuModel = DrillNavModel;
 
 export type BreadcrumbItem = {
   label: string;

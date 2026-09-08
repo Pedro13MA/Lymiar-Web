@@ -10,12 +10,12 @@ import {
   type ReactNode,
 } from "react";
 import { getTaxonomyTree } from "@/lib/api";
-import { buildMegaMenuFromTree } from "@/lib/nav/build-menu";
-import type { MegaMenuModel, TaxonomyTreeNode } from "@/lib/nav/types";
+import { buildDrillNavFromTree } from "@/lib/nav/build-menu";
+import type { DrillNavModel, TaxonomyTreeNode } from "@/lib/nav/types";
 
 type Ctx = {
   tree: TaxonomyTreeNode[];
-  megaMenu: MegaMenuModel | null;
+  megaMenu: DrillNavModel | null;
   taxonomyVersion: string | null;
   loading: boolean;
   error: string | null;
@@ -60,7 +60,7 @@ export function TaxonomyTreeProvider({ children }: { children: ReactNode }) {
 
   const megaMenu = useMemo(() => {
     if (!tree.length) return null;
-    return buildMegaMenuFromTree(tree, taxonomyVersion);
+    return buildDrillNavFromTree(tree, taxonomyVersion);
   }, [tree, taxonomyVersion]);
 
   const value = useMemo(

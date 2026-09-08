@@ -1,17 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { getCategories, type CategorySummary } from "@/lib/api";
 import { CATEGORY_MENU_L1 } from "@/lib/category-slugs";
 import { isP32NavigationEnabled } from "@/lib/nav/flags";
 import { useTaxonomyNavOptional } from "@/components/nav/TaxonomyTreeProvider";
-import {
-  MegaMenuBrands,
-  MegaMenuColumn,
-} from "@/components/nav/MegaMenuParts";
+import { DrillNavHeader, DrillNavList } from "@/components/nav/MegaMenuParts";
 import { CategoryHero } from "@/components/nav/CategoryLayout";
-import type { NavL1Column } from "@/lib/nav/types";
+import type { DrillNavNode } from "@/lib/nav/types";
 
 function LegacyHub() {
   const [categories, setCategories] = useState<CategorySummary[]>([]);
@@ -90,21 +87,88 @@ function LegacyHub() {
   );
 }
 
-/** Página = o mesmo mapa do mega-menu (Categorias no header). */
+/** Página = o mesmo drill-down L1→L2→L3 do mega-menu. */
 function P32Hub() {
   const nav = useTaxonomyNavOptional();
   const model = nav?.megaMenu;
-  const columns = model?.columns ?? [];
-  const [activeId, setActiveId] = useState("");
+  const roots = model?.roots ?? [];
+
+  const [level, setLevel] = useState<0 | 1 | 2>(0);
+  const [selectedL1, setSelectedL1] = useState<DrillNavNode | null>(null);
+  const [selectedL2, setSelectedL2] = useState<DrillNavNode | null>(null);
 
   useEffect(() => {
-    if (!activeId && columns[0]?.id) setActiveId(columns[0].id);
-  }, [columns, activeId]);
+    setLevel(0);
+    setSelectedL1(null);
+    setSelectedL2(null);
+  }, [roots]);
 
-  const active: NavL1Column | undefined = useMemo(
-    () => columns.find((c) => c.id === activeId) || columns[0],
-    [columns, activeId],
+  const goBack = useCallback(() => {
+    if (level === 2) {
+      setSelectedL2(null);
+      setLevel(1);
+      return;
+    }
+    if (level === 1) {
+      setSelectedL1(null);
+      setSelectedL2(null);
+      setLevel(0);
+    }
+  }, [level]);
+
+  const onDrill = useCallback(
+    (node: DrillNavNode) => {
+      if (level === 0) {
+        setSelectedL1(node);
+        setSelectedL2(null);
+        setLevel(1);
+        return;
+      }
+      if (level === 1) {
+        setSelectedL2(node);
+        setLevel(2);
+      }
+    },
+    [level],
   );
+
+  const items = useMemo(() => {
+    if (level === 0) return roots;
+    if (level === 1) return selectedL1?.children ?? [];
+    return selectedL2?.children ?? [];
+  }, [level, roots, selectedL1, selectedL2]);
+
+  const title =
+    level === 0
+      ? "Categorias"
+      : level === 1
+        ? selectedL1?.label ?? "Categorias"
+        : selectedL2?.label ?? selectedL1?.label ?? "Categorias";
+
+  const titleHref =
+    level === 0
+      ? null
+      : level === 1
+        ? selectedL1 && !selectedL1.isVirtual
+          ? selectedL1.href
+          : null
+        : selectedL2 && !selectedL2.isVirtual
+          ? selectedL2.href
+          : null;
+
+  const trail =
+    level === 0
+      ? [{ label: "Categorias" }]
+      : level === 1
+        ? [
+            { label: "Categorias" },
+            { label: selectedL1?.label ?? "" },
+          ].filter((t) => t.label)
+        : [
+            { label: "Categorias" },
+            { label: selectedL1?.label ?? "" },
+            { label: selectedL2?.label ?? "" },
+          ].filter((t) => t.label);
 
   if (nav?.loading) {
     return (
@@ -114,7 +178,7 @@ function P32Hub() {
     );
   }
 
-  if (!columns.length) {
+  if (!roots.length) {
     return (
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         <p className="text-sm text-amber-700">
@@ -128,53 +192,21 @@ function P32Hub() {
     <>
       <CategoryHero
         title="Categorias"
-        description="O mesmo mapa do menu — escolhe a área e aprofunda nas subcategorias."
+        description="Navega L1 → L2 → L3 — o mesmo mapa do menu do header."
         breadcrumbs={[
           { label: "Início", href: "/" },
           { label: "Categorias" },
         ]}
       />
-      <main className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 lg:max-w-7xl">
-        <div className="catalog-panel overflow-hidden">
-          <div className="flex flex-col md:flex-row">
-            <div
-              className="flex shrink-0 flex-row gap-1 overflow-x-auto border-b border-[var(--hm-line)] p-3 md:w-52 md:flex-col md:overflow-visible md:border-b-0 md:border-r md:border-[var(--hm-line)] md:p-4"
-              role="tablist"
-              aria-label="Categorias principais"
-            >
-              {columns.map((col) => {
-                const selected = col.id === active?.id;
-                return (
-                  <button
-                    key={col.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={selected}
-                    className={`shrink-0 rounded-lg px-3 py-2.5 text-left text-sm ${
-                      selected
-                        ? "bg-[var(--hm-brand-soft)] font-medium text-[var(--hm-brand-deep)]"
-                        : "text-[var(--hm-muted)] hover:bg-[var(--hm-bg-soft)]"
-                    }`}
-                    onClick={() => setActiveId(col.id)}
-                  >
-                    <span className="mr-1.5" aria-hidden>
-                      {col.emoji}
-                    </span>
-                    {col.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="min-h-[28rem] min-w-0 flex-1 overflow-y-auto p-5 sm:p-6">
-              {active ? (
-                <div className="flex flex-col gap-8">
-                  <MegaMenuColumn column={active} />
-                  <MegaMenuBrands brands={active.brands} />
-                </div>
-              ) : null}
-            </div>
-          </div>
+      <main className="mx-auto max-w-3xl px-4 pb-16 sm:px-6 lg:max-w-4xl">
+        <div className="catalog-panel overflow-hidden p-5 sm:p-6">
+          <DrillNavHeader
+            title={title}
+            titleHref={titleHref}
+            onBack={level > 0 ? goBack : undefined}
+            trail={trail}
+          />
+          <DrillNavList items={items} onDrill={onDrill} />
         </div>
       </main>
     </>

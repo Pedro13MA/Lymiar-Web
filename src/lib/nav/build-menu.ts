@@ -1,18 +1,22 @@
 import {
-  NAV_ELEVATION,
+  NAV_HIDDEN_L1_SLUGS,
+  NAV_L1_EMOJI,
+  NAV_L1_ORDER,
+  NAV_LABEL_OVERRIDES,
+  NAV_MAIS_ID,
+  NAV_MAIS_L1_SLUGS,
   POPULAR_LEAF_FALLBACK,
-  type NavElevationSpec,
 } from "@/lib/nav/elevation";
 import type {
+  DrillNavModel,
+  DrillNavNode,
   MegaMenuModel,
-  NavGroup,
-  NavL1Column,
   NavLinkItem,
   TaxonomyTreeNode,
 } from "@/lib/nav/types";
 
-/** Dump / honesty queue leaves — not shown as shoppable nav destinations. */
-const HIDDEN_LEAF_SLUGS = new Set([
+/** Dump / honesty queue — never shoppable nav destinations. */
+const HIDDEN_SLUGS = new Set([
   "unclassified",
   "non_catalog",
   "phone_accessory_other",
@@ -23,13 +27,6 @@ const HIDDEN_LEAF_SLUGS = new Set([
 
 function categoryHref(slug: string): string {
   return `/categoria/${slug}/`;
-}
-
-function brandHref(leafSlug: string | undefined, brand: string): string {
-  if (leafSlug) {
-    return `${categoryHref(leafSlug)}?brand=${encodeURIComponent(brand)}`;
-  }
-  return `/mercado/marca/?id=${encodeURIComponent(brand)}`;
 }
 
 /** Flatten all nodes by slug. */
@@ -47,44 +44,40 @@ export function indexTree(
   return map;
 }
 
-function linkFromNode(n: TaxonomyTreeNode, popular?: boolean): NavLinkItem {
-  const level =
-    n.level === 1 ? "L1" : n.level === 2 ? "L2" : ("leaf" as const);
+export function isNavigableTaxonomyNode(n: TaxonomyTreeNode): boolean {
+  if (n.is_active === false) return false;
+  if (HIDDEN_SLUGS.has(n.slug)) return false;
+  if (n.slug === "unclassified") return false;
+  if (n.slug.endsWith("_other")) return false;
+  if (NAV_HIDDEN_L1_SLUGS.has(n.slug)) return false;
+  return true;
+}
+
+function displayLabel(n: TaxonomyTreeNode): string {
+  return NAV_LABEL_OVERRIDES[n.slug] || n.display_name;
+}
+
+function toDrillNode(n: TaxonomyTreeNode): DrillNavNode | null {
+  if (!isNavigableTaxonomyNode(n)) return null;
+  const kids = (n.children || [])
+    .map(toDrillNode)
+    .filter((c): c is DrillNavNode => Boolean(c));
   return {
-    label: n.display_name,
     slug: n.slug,
+    label: displayLabel(n),
     href: categoryHref(n.slug),
-    level,
-    popular,
+    level: n.level,
+    emoji: n.level === 1 ? NAV_L1_EMOJI[n.slug] : undefined,
+    hasChildren: kids.length > 0,
+    children: kids,
   };
 }
 
-function isHiddenLeaf(n: TaxonomyTreeNode): boolean {
-  if (HIDDEN_LEAF_SLUGS.has(n.slug)) return true;
-  if (n.slug.endsWith("_other") && n.level >= 3) return true;
-  return n.is_active === false;
-}
-
-function collectLeavesUnder(node: TaxonomyTreeNode): TaxonomyTreeNode[] {
-  if (!node.children?.length) {
-    return node.level >= 3 && !isHiddenLeaf(node) ? [node] : [];
-  }
-  const out: TaxonomyTreeNode[] = [];
-  for (const c of node.children) {
-    if (!c.children?.length && c.level >= 3) {
-      if (!isHiddenLeaf(c)) out.push(c);
-    } else {
-      out.push(...collectLeavesUnder(c));
-    }
-  }
-  return out;
-}
-
-function orderLeaves(
-  leaves: TaxonomyTreeNode[],
-  preferred: string[],
+function orderByPreferred(
+  nodes: TaxonomyTreeNode[],
+  preferred: readonly string[],
 ): TaxonomyTreeNode[] {
-  const bySlug = new Map(leaves.map((l) => [l.slug, l]));
+  const bySlug = new Map(nodes.map((n) => [n.slug, n]));
   const ordered: TaxonomyTreeNode[] = [];
   const seen = new Set<string>();
   for (const slug of preferred) {
@@ -94,7 +87,7 @@ function orderLeaves(
       ordered.push(n);
     }
   }
-  for (const n of leaves) {
+  for (const n of nodes) {
     if (!seen.has(n.slug)) {
       seen.add(n.slug);
       ordered.push(n);
@@ -103,151 +96,72 @@ function orderLeaves(
   return ordered;
 }
 
-function resolveGroupNodes(
-  spec: NavElevationSpec,
-  anchor: TaxonomyTreeNode | undefined,
-  bySlug: Map<string, TaxonomyTreeNode>,
-): TaxonomyTreeNode[] {
-  if (spec.groupSlugs?.length) {
-    return spec.groupSlugs
-      .map((slug) => bySlug.get(slug))
-      .filter((n): n is TaxonomyTreeNode => Boolean(n));
-  }
-
-  if (!anchor) return [];
-
-  // Elevated L2 hub (e.g. componentes, wearables): one group = itself.
-  if (anchor.level === 2) {
-    return [anchor];
-  }
-
-  const ownAnchors = new Set(
-    NAV_ELEVATION.filter((e) => e.id !== spec.id).map((e) => e.anchorSlug),
+/**
+ * Build L1 → L2 → L3 drill navigation from the live taxonomy tree.
+ * Does not invent nodes; only filters dump leaves and applies label/order UX.
+ */
+export function buildDrillNavFromTree(
+  tree: TaxonomyTreeNode[],
+  taxonomyVersion: string | null,
+): DrillNavModel {
+  const l1Nodes = (tree || []).filter(
+    (n) => n.level === 1 && isNavigableTaxonomyNode(n),
   );
+  const maisSet = new Set<string>(NAV_MAIS_L1_SLUGS);
+  const primary = l1Nodes.filter((n) => !maisSet.has(n.slug));
+  const maisMembers = l1Nodes.filter((n) => maisSet.has(n.slug));
 
-  return (anchor.children || []).filter((c) => {
-    if (c.is_active === false) return false;
-    if (ownAnchors.has(c.slug)) return false;
-    return Boolean(c.children?.length) || c.level === 2;
-  });
-}
+  const orderedPrimary = orderByPreferred(primary, NAV_L1_ORDER);
+  const roots: DrillNavNode[] = [];
 
-function buildGroups(
-  spec: NavElevationSpec,
-  bySlug: Map<string, TaxonomyTreeNode>,
-): NavGroup[] {
-  const anchor = bySlug.get(spec.anchorSlug);
-  const groupNodes = resolveGroupNodes(spec, anchor, bySlug);
-  const popularSet = new Set(spec.leafShortcuts.slice(0, 6));
-  const groups: NavGroup[] = [];
-
-  for (const g of groupNodes) {
-    const leaves = orderLeaves(collectLeavesUnder(g), spec.leafShortcuts);
-    if (!leaves.length) continue;
-    groups.push({
-      title: g.display_name,
-      slug: g.slug,
-      href: categoryHref(g.slug),
-      items: leaves.map((n) => linkFromNode(n, popularSet.has(n.slug))),
-    });
+  for (const n of orderedPrimary) {
+    const node = toDrillNode(n);
+    if (node) roots.push(node);
   }
 
-  // Fallback: shortcuts only when tree groups missing (partial API tree).
-  if (!groups.length) {
-    const items: NavLinkItem[] = [];
-    const seen = new Set<string>();
-    for (const slug of spec.leafShortcuts) {
-      const n = bySlug.get(slug);
-      if (!n || seen.has(n.slug) || isHiddenLeaf(n)) continue;
-      seen.add(n.slug);
-      items.push(linkFromNode(n, popularSet.has(n.slug)));
-    }
-    if (items.length) {
-      groups.push({
-        title: spec.label,
-        slug: spec.anchorSlug,
-        href: categoryHref(spec.anchorSlug),
-        items,
+  if (maisMembers.length) {
+    const orderedMais = orderByPreferred(maisMembers, NAV_MAIS_L1_SLUGS);
+    const children = orderedMais
+      .map(toDrillNode)
+      .filter((c): c is DrillNavNode => Boolean(c));
+    if (children.length) {
+      roots.push({
+        slug: NAV_MAIS_ID,
+        label: "Mais",
+        href: "/categorias/",
+        level: 0,
+        emoji: "⋯",
+        hasChildren: true,
+        isVirtual: true,
+        children,
       });
     }
   }
 
-  return groups;
-}
-
-function buildColumn(
-  spec: NavElevationSpec,
-  bySlug: Map<string, TaxonomyTreeNode>,
-): NavL1Column | null {
-  const anchor = bySlug.get(spec.anchorSlug);
-  const groups = buildGroups(spec, bySlug);
-  if (!groups.length && !anchor) return null;
-
-  const items: NavLinkItem[] = [];
-  const seen = new Set<string>();
-  for (const g of groups) {
-    for (const item of g.items) {
-      if (seen.has(item.slug)) continue;
-      seen.add(item.slug);
-      items.push(item);
-    }
-  }
-
-  // Prefer shortcut order for flat items list.
-  const preferred = orderLeaves(
-    items
-      .map((i) => bySlug.get(i.slug))
-      .filter((n): n is TaxonomyTreeNode => Boolean(n)),
-    spec.leafShortcuts,
-  ).map((n) => linkFromNode(n, spec.leafShortcuts.slice(0, 6).includes(n.slug)));
-
-  const hubSlug = anchor?.slug || groups[0]?.slug || preferred[0]?.slug;
-  if (!hubSlug) return null;
-
-  const primaryLeaf =
-    preferred.find((i) => i.level === "leaf")?.slug ||
-    spec.leafShortcuts.find((s) => (bySlug.get(s)?.level ?? 0) >= 3);
-
   return {
-    id: spec.id,
-    label: spec.label,
-    emoji: spec.emoji,
-    href: categoryHref(hubSlug),
-    anchorSlug: hubSlug,
-    items: preferred.length ? preferred : items,
-    groups,
-    brands: (spec.brands || []).map((b) => ({
-      label: b.label,
-      href: brandHref(primaryLeaf, b.brand),
-    })),
+    roots,
+    allCategoriesHref: "/categorias/",
+    taxonomyVersion,
   };
 }
 
+/** @deprecated Prefer buildDrillNavFromTree. */
 export function buildMegaMenuFromTree(
   tree: TaxonomyTreeNode[],
   taxonomyVersion: string | null,
 ): MegaMenuModel {
-  const bySlug = indexTree(tree);
-  const columns: NavL1Column[] = [];
-  for (const spec of NAV_ELEVATION) {
-    const col = buildColumn(spec, bySlug);
-    if (col) columns.push(col);
-  }
+  return buildDrillNavFromTree(tree, taxonomyVersion);
+}
 
-  const popularFallback: NavLinkItem[] = [];
-  for (const slug of POPULAR_LEAF_FALLBACK) {
-    const n = bySlug.get(slug);
-    if (n) popularFallback.push(linkFromNode(n, true));
-  }
-
-  const quickLinks: NavLinkItem[] = popularFallback.slice(0, 8);
-
+function linkFromNode(n: TaxonomyTreeNode, popular?: boolean): NavLinkItem {
+  const level =
+    n.level === 1 ? "L1" : n.level === 2 ? "L2" : ("leaf" as const);
   return {
-    columns,
-    quickLinks,
-    popularFallback,
-    allCategoriesHref: "/categorias/",
-    taxonomyVersion,
+    label: displayLabel(n),
+    slug: n.slug,
+    href: categoryHref(n.slug),
+    level,
+    popular,
   };
 }
 
@@ -262,23 +176,53 @@ export function relatedForSlug(
   const out: NavLinkItem[] = [];
   if (node.parent) {
     const p = bySlug.get(node.parent);
-    if (p) out.push(linkFromNode(p));
+    if (p && isNavigableTaxonomyNode(p)) out.push(linkFromNode(p));
   }
   const parent = node.parent ? bySlug.get(node.parent) : null;
   if (parent?.children) {
     for (const sib of parent.children) {
-      if (sib.slug !== slug) out.push(linkFromNode(sib));
+      if (sib.slug !== slug && isNavigableTaxonomyNode(sib)) {
+        out.push(linkFromNode(sib));
+      }
     }
   }
   return out.slice(0, 8);
 }
 
+function collectLeavesUnder(node: TaxonomyTreeNode): TaxonomyTreeNode[] {
+  if (!node.children?.length) {
+    return node.level >= 3 && isNavigableTaxonomyNode(node) ? [node] : [];
+  }
+  const out: TaxonomyTreeNode[] = [];
+  for (const c of node.children) {
+    if (!c.children?.length && c.level >= 3) {
+      if (isNavigableTaxonomyNode(c)) out.push(c);
+    } else {
+      out.push(...collectLeavesUnder(c));
+    }
+  }
+  return out;
+}
+
 export function flattenTreeForMap(
   tree: TaxonomyTreeNode[],
 ): { l1: TaxonomyTreeNode; l2: TaxonomyTreeNode[]; leaves: TaxonomyTreeNode[] }[] {
-  return tree.map((l1) => {
-    const l2 = l1.children || [];
-    const leaves = l2.flatMap((c) => collectLeavesUnder(c));
-    return { l1, l2, leaves };
-  });
+  return tree
+    .filter((l1) => isNavigableTaxonomyNode(l1))
+    .map((l1) => {
+      const l2 = (l1.children || []).filter(isNavigableTaxonomyNode);
+      const leaves = l2.flatMap((c) => collectLeavesUnder(c));
+      return { l1, l2, leaves };
+    });
+}
+
+/** Popular quick links derived from live tree (optional consumers). */
+export function popularLinksFromTree(tree: TaxonomyTreeNode[]): NavLinkItem[] {
+  const bySlug = indexTree(tree);
+  const out: NavLinkItem[] = [];
+  for (const slug of POPULAR_LEAF_FALLBACK) {
+    const n = bySlug.get(slug);
+    if (n && isNavigableTaxonomyNode(n)) out.push(linkFromNode(n, true));
+  }
+  return out.slice(0, 8);
 }

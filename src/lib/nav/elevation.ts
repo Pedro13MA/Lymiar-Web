@@ -1,283 +1,50 @@
 /**
- * P3.2 presentation elevation — nav columns + emoji labels.
- * Product assignment SoT remains L3; this is UI composition only.
+ * Nav presentation — L1 order, labels and emoji only.
+ * Product assignment SoT remains L3; hierarchy comes from the live taxonomy tree.
  */
 
-export type NavElevationSpec = {
-  id: string;
-  label: string;
-  emoji: string;
-  /** Hub slug (L1 or elevated L2). */
-  anchorSlug: string;
-  /**
-   * Optional explicit L2 group slugs under the hub.
-   * When omitted, all L2 children of the anchor are used
-   * (except anchors that have their own top-level column).
-   */
-  groupSlugs?: string[];
-  /** Preferred leaf order + popular highlighting within groups. */
-  leafShortcuts: string[];
-  /** Featured brand filters (not categories). */
-  brands?: { label: string; brand: string }[];
+/** Preferred L1 order in the drawer (slugs must exist in the live tree). */
+export const NAV_L1_ORDER = [
+  "informatica",
+  "telemoveis",
+  "gaming",
+  "tv_audio",
+  "fotografia",
+  "casa",
+  "moda",
+  "desporto",
+] as const;
+
+/** L1 slugs grouped under the virtual "Mais" bucket (not top-level). */
+export const NAV_MAIS_L1_SLUGS = ["servicos", "pecas"] as const;
+
+/** Never shown in navigation. */
+export const NAV_HIDDEN_L1_SLUGS = new Set(["outros", "fila"]);
+
+/**
+ * Display overrides (UX). Hub display_name is preferred when already updated;
+ * these ensure correct PT labels even before seed apply.
+ */
+export const NAV_LABEL_OVERRIDES: Record<string, string> = {
+  telemoveis: "Dispositivos móveis",
+  tv_audio: "Imagem e Som",
+  dispositivos: "Telemóveis e tablets",
 };
 
-export const NAV_ELEVATION: NavElevationSpec[] = [
-  {
-    id: "computadores",
-    label: "Computadores",
-    emoji: "💻",
-    anchorSlug: "informatica",
-    groupSlugs: [
-      "computadores",
-      "monitores",
-      "armazenamento",
-      "perifericos",
-      "redes",
-      "impressao",
-      "software",
-    ],
-    leafShortcuts: [
-      "laptop",
-      "desktop",
-      "mini_pc",
-      "aio",
-      "workstation",
-      "server",
-      "sbc",
-      "monitor",
-      "keyboard",
-      "mouse",
-      "headphones",
-      "webcam",
-      "external_ssd",
-      "usb_flash",
-      "enclosure",
-      "memory_card",
-      "docking_station",
-      "laptop_bag",
-      "hardware_wallet",
-      "router",
-      "nas",
-      "os_license",
-    ],
-    brands: [
-      { label: "Apple", brand: "apple" },
-      { label: "ASUS", brand: "asus" },
-      { label: "Lenovo", brand: "lenovo" },
-      { label: "HP", brand: "hp" },
-    ],
-  },
-  {
-    id: "componentes",
-    label: "Componentes",
-    emoji: "🧩",
-    anchorSlug: "componentes",
-    leafShortcuts: [
-      "gpu",
-      "cpu",
-      "motherboard",
-      "ram",
-      "ssd",
-      "hdd",
-      "psu",
-      "cooler",
-      "pc_case",
-      "nic",
-      "network_switch",
-      "capture_card",
-      "sound_card",
-    ],
-    brands: [
-      { label: "ASUS", brand: "asus" },
-      { label: "MSI", brand: "msi" },
-      { label: "Kingston", brand: "kingston" },
-      { label: "Samsung", brand: "samsung" },
-    ],
-  },
-  {
-    id: "telemoveis",
-    label: "Telemóveis",
-    emoji: "📱",
-    anchorSlug: "telemoveis",
-    groupSlugs: ["dispositivos", "acessorios"],
-    leafShortcuts: [
-      "smartphone",
-      "tablet",
-      "ebook_reader",
-      "phone_case",
-      "tablet_case",
-      "screen_protector",
-      "charger",
-      "power_bank",
-      "cable",
-      "car_mount",
-    ],
-    brands: [
-      { label: "Apple", brand: "apple" },
-      { label: "Samsung", brand: "samsung" },
-      { label: "Xiaomi", brand: "xiaomi" },
-      { label: "Google", brand: "google" },
-    ],
-  },
-  {
-    id: "wearables",
-    label: "Wearables",
-    emoji: "⌚",
-    anchorSlug: "wearables",
-    leafShortcuts: [
-      "smartwatch",
-      "fitness_tracker",
-      "wearable_band",
-      "smart_ring",
-      "item_tracker",
-    ],
-    brands: [
-      { label: "Apple", brand: "apple" },
-      { label: "Garmin", brand: "garmin" },
-      { label: "Huawei", brand: "huawei" },
-      { label: "Samsung", brand: "samsung" },
-    ],
-  },
-  {
-    id: "gaming",
-    label: "Gaming",
-    emoji: "🎮",
-    anchorSlug: "gaming",
-    leafShortcuts: [
-      "console",
-      "handheld_console",
-      "vr_headset",
-      "game_physical",
-      "game_digital",
-      "controller",
-      "gaming_chair",
-      "racing_wheel",
-      "sim_racing_rig",
-    ],
-    brands: [
-      { label: "Sony", brand: "sony" },
-      { label: "Microsoft", brand: "microsoft" },
-      { label: "Nintendo", brand: "nintendo" },
-    ],
-  },
-  {
-    id: "tv_audio",
-    label: "TV e Áudio",
-    emoji: "📺",
-    anchorSlug: "tv_audio",
-    leafShortcuts: [
-      "tv",
-      "soundbar",
-      "headphones",
-      "speakers",
-      "projector",
-      "media_streamer",
-    ],
-    brands: [
-      { label: "Samsung", brand: "samsung" },
-      { label: "LG", brand: "lg" },
-      { label: "Sony", brand: "sony" },
-      { label: "Bose", brand: "bose" },
-    ],
-  },
-  {
-    id: "fotografia",
-    label: "Fotografia",
-    emoji: "📷",
-    anchorSlug: "fotografia",
-    leafShortcuts: [
-      "camera",
-      "action_cam",
-      "lens",
-      "drone",
-      "gimbal",
-      "tripod",
-      "camera_bag",
-      "camera_filter",
-    ],
-    brands: [
-      { label: "DJI", brand: "dji" },
-      { label: "Sony", brand: "sony" },
-      { label: "Canon", brand: "canon" },
-      { label: "GoPro", brand: "gopro" },
-    ],
-  },
-  {
-    id: "smart_home",
-    label: "Casa Inteligente",
-    emoji: "🏡",
-    anchorSlug: "smart_home",
-    leafShortcuts: [
-      "security_camera",
-      "smart_plug",
-      "smart_bulb",
-      "smart_lock",
-    ],
-    brands: [
-      { label: "TP-Link", brand: "tp-link" },
-      { label: "Xiaomi", brand: "xiaomi" },
-      { label: "Google", brand: "google" },
-      { label: "Amazon", brand: "amazon" },
-    ],
-  },
-  {
-    id: "casa",
-    label: "Casa & Eletro",
-    emoji: "🏠",
-    anchorSlug: "casa",
-    groupSlugs: [
-      "cozinha",
-      "cozinha_utensilios",
-      "limpeza",
-      "limpeza_consumiveis",
-      "clima",
-      "cuidado_roupa",
-      "grandes_eletro",
-      "casa_geral",
-      "animais",
-    ],
-    leafShortcuts: [
-      "air_fryer",
-      "coffee_machine",
-      "cookware",
-      "kitchen_appliance",
-      "fridge",
-      "washing_machine",
-      "vacuum",
-      "robot_vacuum",
-      "climate_appliance",
-      "casa_lighting",
-      "furniture",
-      "consumer_batteries",
-      "toys_collectibles",
-      "personal_care",
-    ],
-    brands: [
-      { label: "Tefal", brand: "tefal" },
-      { label: "Philips", brand: "philips" },
-      { label: "Dyson", brand: "dyson" },
-      { label: "Bosch", brand: "bosch" },
-    ],
-  },
-  {
-    id: "desporto",
-    label: "Desporto",
-    emoji: "🎾",
-    anchorSlug: "desporto",
-    leafShortcuts: [
-      "padel_gear",
-      "padel_apparel",
-      "sports_equipment",
-      "apparel",
-      "footwear",
-    ],
-    brands: [
-      { label: "Bullpadel", brand: "bullpadel" },
-      { label: "NOX", brand: "nox" },
-      { label: "Adidas", brand: "adidas" },
-    ],
-  },
-];
+export const NAV_L1_EMOJI: Record<string, string> = {
+  informatica: "💻",
+  telemoveis: "📱",
+  gaming: "🎮",
+  tv_audio: "📺",
+  fotografia: "📷",
+  casa: "🏠",
+  moda: "👕",
+  desporto: "🎾",
+  servicos: "🛠️",
+  pecas: "🔧",
+};
+
+export const NAV_MAIS_ID = "__mais__";
 
 export const POPULAR_LEAF_FALLBACK = [
   "smartphone",
@@ -330,4 +97,7 @@ export const P32_EXTRA_STATIC_SLUGS = [
   "server",
   "sbc",
   "hardware_wallet",
+  "moda",
+  "vestuario",
+  "calcado",
 ] as const;

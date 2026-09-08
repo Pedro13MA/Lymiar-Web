@@ -1,9 +1,8 @@
 export { BreadcrumbNav } from "@/components/nav/BreadcrumbNav";
 export { MegaMenu, MegaMenuTrigger } from "@/components/nav/MegaMenu";
 export {
-  MegaMenuBrands,
-  MegaMenuColumn,
-  MegaMenuQuickLinks,
+  DrillNavHeader,
+  DrillNavList,
 } from "@/components/nav/MegaMenuParts";
 export { BottomNavigation } from "@/components/nav/BottomNavigation";
 export { SiteHeaderP32 } from "@/components/nav/SiteHeaderP32";

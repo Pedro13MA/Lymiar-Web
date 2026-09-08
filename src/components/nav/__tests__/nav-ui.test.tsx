@@ -4,7 +4,8 @@ import { BreadcrumbNav } from "@/components/nav/BreadcrumbNav";
 import { EmptyCategory } from "@/components/nav/EmptyCategory";
 import { BottomNavigation } from "@/components/nav/BottomNavigation";
 import { MegaMenu } from "@/components/nav/MegaMenu";
-import type { MegaMenuModel } from "@/lib/nav/types";
+import type { DrillNavModel } from "@/lib/nav/types";
+import { NAV_MAIS_ID } from "@/lib/nav/elevation";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -75,71 +76,112 @@ describe("BottomNavigation", () => {
   });
 });
 
-const sampleMenu: MegaMenuModel = {
-  columns: [
+const sampleMenu: DrillNavModel = {
+  roots: [
     {
-      id: "computadores",
-      label: "Computadores",
-      emoji: "💻",
+      slug: "informatica",
+      label: "Informática",
       href: "/categoria/informatica/",
-      anchorSlug: "informatica",
-      items: [
-        { label: "Portáteis", slug: "laptop", href: "/categoria/laptop/" },
-        { label: "Desktops", slug: "desktop", href: "/categoria/desktop/" },
-      ],
-      groups: [
+      level: 1,
+      emoji: "💻",
+      hasChildren: true,
+      children: [
         {
-          title: "Computadores",
+          slug: "componentes",
+          label: "Componentes",
+          href: "/categoria/componentes/",
+          level: 2,
+          hasChildren: true,
+          children: [
+            {
+              slug: "cpu",
+              label: "Processadores",
+              href: "/categoria/cpu/",
+              level: 3,
+              hasChildren: false,
+              children: [],
+            },
+            {
+              slug: "gpu",
+              label: "Placas Gráficas",
+              href: "/categoria/gpu/",
+              level: 3,
+              hasChildren: false,
+              children: [],
+            },
+          ],
+        },
+        {
           slug: "computadores",
+          label: "Computadores",
           href: "/categoria/computadores/",
-          items: [
-            { label: "Portáteis", slug: "laptop", href: "/categoria/laptop/" },
-            { label: "Desktops", slug: "desktop", href: "/categoria/desktop/" },
-            { label: "Mini-PC", slug: "mini_pc", href: "/categoria/mini_pc/" },
-          ],
-        },
-        {
-          title: "Periféricos",
-          slug: "perifericos",
-          href: "/categoria/perifericos/",
-          items: [
-            { label: "Teclados", slug: "keyboard", href: "/categoria/keyboard/" },
-            { label: "Ratos", slug: "mouse", href: "/categoria/mouse/" },
+          level: 2,
+          hasChildren: true,
+          children: [
+            {
+              slug: "laptop",
+              label: "Portáteis",
+              href: "/categoria/laptop/",
+              level: 3,
+              hasChildren: false,
+              children: [],
+            },
           ],
         },
       ],
-      brands: [],
     },
     {
-      id: "gaming",
+      slug: "gaming",
       label: "Gaming",
-      emoji: "🎮",
       href: "/categoria/gaming/",
-      anchorSlug: "gaming",
-      items: [
-        { label: "Consolas", slug: "console", href: "/categoria/console/" },
-      ],
-      groups: [
+      level: 1,
+      emoji: "🎮",
+      hasChildren: true,
+      children: [
         {
-          title: "Hardware",
           slug: "gaming_hardware",
+          label: "Hardware",
           href: "/categoria/gaming_hardware/",
-          items: [
-            { label: "Consolas", slug: "console", href: "/categoria/console/" },
+          level: 2,
+          hasChildren: true,
+          children: [
+            {
+              slug: "console",
+              label: "Consolas",
+              href: "/categoria/console/",
+              level: 3,
+              hasChildren: false,
+              children: [],
+            },
           ],
         },
       ],
-      brands: [],
+    },
+    {
+      slug: NAV_MAIS_ID,
+      label: "Mais",
+      href: "/categorias/",
+      level: 0,
+      isVirtual: true,
+      hasChildren: true,
+      children: [
+        {
+          slug: "servicos",
+          label: "Serviços",
+          href: "/categoria/servicos/",
+          level: 1,
+          hasChildren: false,
+          children: [],
+        },
+      ],
     },
   ],
-  quickLinks: [],
-  popularFallback: [],
   allCategoriesHref: "/categorias/",
   taxonomyVersion: "1.2",
 };
 
-describe("MegaMenu drawer", () => {
-  it("lists all categories and shows every subcategory without Ver tudo", () => {
+describe("MegaMenu drill-down drawer", () => {
+  it("nível 0 shows only L1, not Computadores/Componentes as tops", () => {
     render(
       <MegaMenu
         model={sampleMenu}
@@ -148,15 +190,77 @@ describe("MegaMenu drawer", () => {
         triggerId="cat-trigger"
       />,
     );
-    expect(screen.getByRole("tab", { name: /Computadores/ })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: /Gaming/ })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Portáteis" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Mini-PC" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Teclados" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Informática/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Gaming/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^Computadores/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Componentes/ })).toBeNull();
     expect(screen.queryByText(/Ver tudo/i)).toBeNull();
     expect(screen.queryByText(/Explorar /i)).toBeNull();
+  });
 
-    fireEvent.click(screen.getByRole("tab", { name: /Gaming/ }));
-    expect(screen.getByRole("link", { name: "Consolas" })).toBeTruthy();
+  it("drills L1 → L2 → L3 and supports Voltar + Escape", () => {
+    const onOpenChange = vi.fn();
+    render(
+      <MegaMenu
+        model={sampleMenu}
+        open
+        onOpenChange={onOpenChange}
+        triggerId="cat-trigger"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Informática/ }));
+    expect(screen.getByRole("button", { name: /Componentes/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Computadores/ })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Processadores" })).toBeNull();
+
+    const infoTitle = screen.getByRole("link", { name: "Informática" });
+    expect(infoTitle.getAttribute("href")).toBe("/categoria/informatica/");
+
+    fireEvent.click(screen.getByRole("button", { name: /Componentes/ }));
+    expect(screen.getByRole("link", { name: "Processadores" }).getAttribute("href")).toBe(
+      "/categoria/cpu/",
+    );
+    expect(screen.getByRole("link", { name: "Placas Gráficas" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Portáteis" })).toBeNull();
+
+    const compTitle = screen.getByRole("link", { name: "Componentes" });
+    expect(compTitle.getAttribute("href")).toBe("/categoria/componentes/");
+
+    fireEvent.click(screen.getByRole("button", { name: /Voltar/ }));
+    expect(screen.getByRole("button", { name: /Componentes/ })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /Voltar/ }));
+    expect(screen.getByRole("button", { name: /Informática/ })).toBeTruthy();
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("Fechar and click-outside close the drawer", () => {
+    const onOpenChange = vi.fn();
+    render(
+      <MegaMenu
+        model={sampleMenu}
+        open
+        onOpenChange={onOpenChange}
+        triggerId="cat-trigger"
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Fechar" }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+
+    onOpenChange.mockClear();
+    cleanup();
+    render(
+      <MegaMenu
+        model={sampleMenu}
+        open
+        onOpenChange={onOpenChange}
+        triggerId="cat-trigger"
+      />,
+    );
+    fireEvent.click(screen.getByLabelText("Fechar categorias"));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });

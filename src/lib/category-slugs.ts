@@ -9,6 +9,9 @@ export const CATEGORY_STATIC_SLUGS = [
   "servicos",
   "pecas",
   "outros",
+  "moda",
+  "vestuario",
+  "calcado",
   "computadores",
   "componentes",
   "monitores",
@@ -201,9 +204,9 @@ export const CATEGORY_STATIC_SLUGS = [
 /** L1 destacados no menu (ordem de navegação). */
 export const CATEGORY_MENU_L1 = [
   { slug: "informatica", label: "Informática" },
+  { slug: "telemoveis", label: "Dispositivos móveis" },
   { slug: "gaming", label: "Gaming" },
   { slug: "casa", label: "Casa" },
-  { slug: "telemoveis", label: "Telemóveis" },
-  { slug: "tv_audio", label: "TV e Áudio" },
+  { slug: "tv_audio", label: "Imagem e Som" },
   { slug: "fotografia", label: "Fotografia" },
 ] as const;
