@@ -76,7 +76,7 @@ export function MegaMenu({ model, open, onOpenChange, triggerId }: Props) {
         role="dialog"
         aria-modal="true"
         aria-labelledby={triggerId}
-        className="absolute inset-y-0 left-0 flex w-full max-w-[40rem] flex-col bg-white text-slate-900 shadow-2xl sm:max-w-[44rem] lg:max-w-[48rem]"
+        className="absolute inset-y-0 left-0 flex w-full max-w-[42rem] flex-col bg-white text-slate-900 shadow-2xl sm:max-w-[52rem] lg:max-w-[58rem]"
       >
         <div className="flex h-14 shrink-0 items-center justify-between border-b border-slate-200 px-4">
           <p className="text-sm font-semibold tracking-tight text-slate-900">
@@ -123,7 +123,7 @@ export function MegaMenu({ model, open, onOpenChange, triggerId }: Props) {
 
           <div
             ref={listRef}
-            className="min-w-0 flex-1 overflow-y-auto overscroll-contain bg-white p-4 sm:p-5"
+            className="min-w-0 flex-1 overflow-y-auto overscroll-contain bg-white px-4 pb-10 pt-4 sm:px-6 sm:pb-12 sm:pt-5"
           >
             {active ? (
               <div className="flex flex-col gap-6 pb-8">

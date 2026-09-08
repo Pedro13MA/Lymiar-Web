@@ -16,11 +16,11 @@ function GroupBlock({
   onNavigate?: () => void;
 }) {
   return (
-    <section className="min-w-0 break-inside-avoid">
+    <section className="mb-5 break-inside-avoid">
       <Link
         href={group.href}
         onClick={onNavigate}
-        className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.07em] text-slate-400 transition-colors hover:text-slate-700"
+        className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.07em] text-slate-400 transition-colors hover:text-slate-700"
       >
         {group.title}
       </Link>
@@ -30,7 +30,7 @@ function GroupBlock({
             <Link
               href={item.href}
               onClick={onNavigate}
-              className={`block rounded-lg px-2 py-1.5 text-sm leading-snug transition-colors hover:bg-orange-50 hover:text-[var(--hm-brand-deep,#e2550f)] ${
+              className={`block rounded-md px-1.5 py-1 text-[13px] leading-snug transition-colors hover:bg-orange-50 hover:text-[var(--hm-brand-deep,#e2550f)] ${
                 item.popular
                   ? "font-medium text-slate-800"
                   : "text-slate-600"
@@ -61,7 +61,7 @@ export function MegaMenuColumn({ column, onNavigate }: Props) {
 
   return (
     <div className="min-w-0">
-      <div className="mb-5 flex items-center gap-2 border-b border-slate-100 pb-3">
+      <div className="mb-4 flex items-center gap-2 border-b border-slate-100 pb-3">
         <span className="text-xl leading-none" aria-hidden>
           {column.emoji}
         </span>
@@ -73,8 +73,7 @@ export function MegaMenuColumn({ column, onNavigate }: Props) {
           {column.label}
         </Link>
       </div>
-      {/* Stable 2-col grid — avoids wrap/orphan breaks from CSS columns */}
-      <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2">
+      <div className="gap-x-8 [column-count:1] sm:[column-count:2] xl:[column-count:3]">
         {groups.map((group) => (
           <GroupBlock key={group.slug} group={group} onNavigate={onNavigate} />
         ))}
