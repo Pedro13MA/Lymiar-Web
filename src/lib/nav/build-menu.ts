@@ -96,6 +96,19 @@ function buildColumn(
     items.find((i) => i.level === "leaf")?.slug ||
     spec.leafShortcuts.find((s) => (bySlug.get(s)?.level ?? 0) >= 3);
 
+  let secondarySeeAll: NavLinkItem | undefined;
+  if (spec.secondarySeeAll) {
+    const sec = bySlug.get(spec.secondarySeeAll.slug);
+    if (sec) {
+      secondarySeeAll = {
+        label: spec.secondarySeeAll.label,
+        slug: sec.slug,
+        href: categoryHref(sec.slug),
+        level: sec.level === 1 ? "L1" : sec.level === 2 ? "L2" : "leaf",
+      };
+    }
+  }
+
   return {
     id: spec.id,
     label: spec.label,
@@ -108,6 +121,7 @@ function buildColumn(
       href: categoryHref(hubSlug),
       level: anchor?.level === 1 ? "L1" : "L2",
     },
+    secondarySeeAll,
     brands: (spec.brands || []).map((b) => ({
       label: b.label,
       href: brandHref(primaryLeaf, b.brand),

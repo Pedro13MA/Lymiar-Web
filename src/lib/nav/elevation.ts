@@ -12,6 +12,8 @@ export type NavElevationSpec = {
   leafShortcuts: string[];
   /** Featured brand filters (not categories). */
   brands?: { label: string; brand: string }[];
+  /** Optional second hub link (e.g. L2 acessorios under Telemóveis). */
+  secondarySeeAll?: { label: string; slug: string };
 };
 
 export const NAV_ELEVATION: NavElevationSpec[] = [
@@ -76,11 +78,17 @@ export const NAV_ELEVATION: NavElevationSpec[] = [
       "tablet",
       "ebook_reader",
       "phone_case",
+      "tablet_case",
       "screen_protector",
       "charger",
       "power_bank",
       "cable",
+      "car_mount",
     ],
+    secondarySeeAll: {
+      label: "Explorar Acessórios",
+      slug: "acessorios",
+    },
     brands: [
       { label: "Apple", brand: "apple" },
       { label: "Samsung", brand: "samsung" },
@@ -192,11 +200,12 @@ export const NAV_ELEVATION: NavElevationSpec[] = [
       "kitchen_appliance",
       "fridge",
       "washing_machine",
-      "dishwasher",
       "vacuum",
       "robot_vacuum",
-      "iron",
       "climate_appliance",
+      "casa_lighting",
+      "furniture",
+      "consumer_batteries",
       "personal_care",
     ],
     brands: [
@@ -266,4 +275,11 @@ export const P32_EXTRA_STATIC_SLUGS = [
   "cozinha_utensilios",
   "cuidado_roupa",
   "kitchen_appliance",
+  "tablet_case",
+  "car_mount",
+  "casa_lighting",
+  "furniture",
+  "consumer_batteries",
+  "toys_collectibles",
+  "optical_media",
 ] as const;

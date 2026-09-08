@@ -31,6 +31,8 @@ export type NavL1Column = {
   anchorSlug: string;
   items: NavLinkItem[];
   seeAll?: NavLinkItem;
+  /** Optional second explore link (e.g. Acessórios under Telemóveis). */
+  secondarySeeAll?: NavLinkItem;
   brands: { label: string; href: string }[];
   groups?: { title: string; items: NavLinkItem[] }[];
 };

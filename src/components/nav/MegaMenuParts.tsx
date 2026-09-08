@@ -53,6 +53,16 @@ export function MegaMenuColumn({ column, onNavigate }: Props) {
           <span className="ml-1" aria-hidden>→</span>
         </Link>
       ) : null}
+      {column.secondarySeeAll ? (
+        <Link
+          href={column.secondarySeeAll.href}
+          onClick={onNavigate}
+          className="mt-2 inline-flex items-center text-xs font-semibold text-sky-700 transition-colors hover:text-sky-800"
+        >
+          {column.secondarySeeAll.label}
+          <span className="ml-1" aria-hidden>→</span>
+        </Link>
+      ) : null}
     </div>
   );
 }
