@@ -4,9 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Breadcrumbs } from "@/components/categoria/Breadcrumbs";
 import { CategorySEO } from "@/components/categoria/CategorySEO";
-import { CategorySidebar } from "@/components/categoria/CategorySidebar";
 import { OpportunityCard } from "@/components/product/OpportunityCard";
 import { FilterSidebar, type FilterValues } from "@/components/search/FilterSidebar";
+import { CatalogActiveChips } from "@/components/catalog/CatalogActiveChips";
 import { Button } from "@/components/ui/button";
 import { WifiLoaderBlock } from "@/components/ui/WifiLoader";
 import { WatchButton } from "@/components/watchlists/WatchButton";
@@ -20,17 +20,20 @@ import {
   type TaxonomyFacet,
 } from "@/lib/api";
 import { resolveConsumerDecision } from "@/lib/consumer-decision";
+import type { CatalogChip } from "@/lib/catalog-ui";
 import {
   appendSelectionToParams,
+  buildActiveFilterChips,
   clearTaxonomySelection,
   countSelected,
+  removeActiveFilterChip,
   selectionFromSearchParamsWithLegacy,
+  withPriceSelection,
   type TaxonomySelection,
 } from "@/lib/taxonomy-facets";
 import type { Product } from "@/lib/types";
 import { relatedForSlug } from "@/lib/nav/build-menu";
 import { EmptyCategory } from "@/components/nav/EmptyCategory";
-import { CategoryRelated } from "@/components/nav/CategoryLayout";
 import { useTaxonomyNavOptional } from "@/components/nav/TaxonomyTreeProvider";
 import { cn } from "@/lib/utils";
 
@@ -144,6 +147,15 @@ export function CategoryPage({ slug, initialCategory = null }: Props) {
       },
       selection: TaxonomySelection = taxonomySelection,
     ) => {
+      let nextSelection = selection;
+      if (patch.minPrice !== undefined || patch.maxPrice !== undefined) {
+        nextSelection = withPriceSelection(
+          selection,
+          patch.minPrice !== undefined ? patch.minPrice : undefined,
+          patch.maxPrice !== undefined ? patch.maxPrice : undefined,
+        );
+      }
+
       const params = new URLSearchParams();
       const query = patch.q !== undefined ? patch.q.trim() : q;
       if (query) params.set("q", query);
@@ -151,22 +163,41 @@ export function CategoryPage({ slug, initialCategory = null }: Props) {
       if (sort && sort !== "lymiar_desc") params.set("sort_by", sort);
       const nextPage = patch.page ?? page;
       if (nextPage > 1) params.set("page", String(nextPage));
-      const minP = patch.minPrice ?? filters.minPrice;
-      const maxP = patch.maxPrice ?? filters.maxPrice;
-      if (!selection.price_min?.length && minP) params.set("price_min", minP);
-      if (!selection.price_max?.length && maxP) params.set("price_max", maxP);
-      appendSelectionToParams(params, selection);
-      if (!selection.brand?.length && filters.brand) {
-        params.append("brand", filters.brand);
-      }
-      if (!selection.store?.length && filters.store) {
-        params.append("store", filters.store);
-      }
+      appendSelectionToParams(params, nextSelection);
       const qs = params.toString();
       return `/categoria/${slug}/${qs ? `?${qs}` : ""}`;
     },
-    [filters.brand, filters.maxPrice, filters.minPrice, filters.store, page, q, slug, sortBy, taxonomySelection],
+    [page, q, slug, sortBy, taxonomySelection],
   );
+
+  const clearAllFilters = useCallback(() => {
+    setMinDraft("");
+    setMaxDraft("");
+    router.push(
+      buildUrl(
+        { page: 1, minPrice: "", maxPrice: "", q: "" },
+        clearTaxonomySelection(),
+      ),
+    );
+  }, [buildUrl, router]);
+
+  const activeChips: CatalogChip[] = useMemo(() => {
+    const raw = buildActiveFilterChips(taxonomySelection, taxonomyFacets, { q });
+    return raw.map((chip) => ({
+      key: chip.key,
+      label: chip.label,
+      onRemove: () => {
+        if (chip.facetId === "q") {
+          router.push(buildUrl({ page: 1, q: "" }));
+          return;
+        }
+        if (chip.facetId === "price_min") setMinDraft("");
+        if (chip.facetId === "price_max") setMaxDraft("");
+        const next = removeActiveFilterChip(taxonomySelection, chip);
+        router.push(buildUrl({ page: 1 }, next));
+      },
+    }));
+  }, [taxonomySelection, taxonomyFacets, q, buildUrl, router]);
 
   useEffect(() => {
     let cancelled = false;
@@ -251,12 +282,7 @@ export function CategoryPage({ slug, initialCategory = null }: Props) {
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const hasActiveFilters =
-    countSelected(taxonomySelection) > 0 ||
-    Boolean(q) ||
-    Boolean(filters.brand) ||
-    Boolean(filters.store) ||
-    Boolean(filters.minPrice) ||
-    Boolean(filters.maxPrice);
+    countSelected(taxonomySelection) > 0 || Boolean(q);
   const categoryTotal =
     totalInCategory ?? (loading ? null : total);
   const recommended = useMemo(
@@ -364,15 +390,14 @@ export function CategoryPage({ slug, initialCategory = null }: Props) {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,272px)_minmax(0,1fr)] lg:gap-8">
         <aside
           className={cn(
-            "catalog-filters lymiar-sidebar order-2 space-y-0 lg:order-1 lg:sticky lg:top-20",
+            "catalog-filters lymiar-sidebar order-2 space-y-4 lg:order-1 lg:sticky lg:top-20",
             "lg:max-h-[calc(100vh-6rem)] lg:self-start lg:overflow-y-auto lg:overscroll-contain lg:pr-1",
           )}
         >
-          {category ? (
-            <CategorySidebar
-              category={category}
-              siblings={category.siblings}
-              embedded
+          {activeChips.length ? (
+            <CatalogActiveChips
+              chips={activeChips}
+              onClearAll={clearAllFilters}
             />
           ) : null}
           <FilterSidebar
@@ -383,6 +408,7 @@ export function CategoryPage({ slug, initialCategory = null }: Props) {
               router.push(buildUrl({ page: 1 }, next))
             }
             filters={filters}
+            inferredCategory={slug}
             showInStock={false}
             hideSubcategoryFilter
             embedded
@@ -404,21 +430,20 @@ export function CategoryPage({ slug, initialCategory = null }: Props) {
                 buildUrl(
                   {
                     page: 1,
-                    minPrice: patch.minPrice ?? filters.minPrice,
-                    maxPrice: patch.maxPrice ?? filters.maxPrice,
+                    minPrice:
+                      patch.minPrice !== undefined
+                        ? patch.minPrice
+                        : undefined,
+                    maxPrice:
+                      patch.maxPrice !== undefined
+                        ? patch.maxPrice
+                        : undefined,
                   },
                   nextSel,
                 ),
               );
             }}
-            onClear={() =>
-              router.push(
-                buildUrl(
-                  { page: 1, minPrice: "", maxPrice: "", q: "" },
-                  clearTaxonomySelection(),
-                ),
-              )
-            }
+            onClear={clearAllFilters}
             onApplyPrice={() =>
               router.push(
                 buildUrl({
@@ -513,7 +538,6 @@ export function CategoryPage({ slug, initialCategory = null }: Props) {
               related={related}
             />
           )}
-          {related.length ? <CategoryRelated items={related} /> : null}
         </section>
       </div>
     </main>

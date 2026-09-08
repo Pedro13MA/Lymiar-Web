@@ -236,3 +236,123 @@ export function formatFacetValueLabel(
   }
   return raw;
 }
+
+/** Facet ids handled by the dedicated price inputs (not enum panels). */
+export const PRICE_INPUT_FACET_IDS = new Set(["price_min", "price_max"]);
+
+const FACET_CHIP_PREFIX: Record<string, string> = {
+  brand: "Marca",
+  store: "Loja",
+  condition: "Estado",
+  manufacturer: "Fabricante",
+  socket: "Socket",
+  chipset: "Chipset",
+  series: "Série",
+  model: "Modelo",
+  vram_gb: "VRAM",
+  memory_gb: "RAM",
+  capacity_gb: "Capacidade",
+  refresh_rate: "Hz",
+  screen_size: "Ecrã",
+  power_w: "Potência",
+  cores: "Núcleos",
+  threads: "Threads",
+};
+
+export type ActiveFilterChip = {
+  key: string;
+  label: string;
+  facetId: string;
+  value: string;
+};
+
+/** Build removable chips from the current taxonomy selection (+ optional query). */
+export function buildActiveFilterChips(
+  selection: TaxonomySelection,
+  facets: TaxonomyFacet[] | null | undefined,
+  opts?: { q?: string },
+): ActiveFilterChip[] {
+  const list: ActiveFilterChip[] = [];
+  const q = (opts?.q || "").trim();
+  if (q) {
+    list.push({ key: "q", label: `Pesquisa: «${q}»`, facetId: "q", value: q });
+  }
+
+  const facetById = new Map((facets || []).map((f) => [f.id, f]));
+
+  for (const [fid, values] of Object.entries(selection)) {
+    if (!values?.length) continue;
+    const facet = facetById.get(fid);
+    const prefix = FACET_CHIP_PREFIX[fid] || facet?.label || fid;
+
+    if (fid === "price_min") {
+      list.push({
+        key: `price_min:${values[0]}`,
+        label: `≥ ${values[0]} €`,
+        facetId: fid,
+        value: values[0],
+      });
+      continue;
+    }
+    if (fid === "price_max") {
+      list.push({
+        key: `price_max:${values[0]}`,
+        label: `≤ ${values[0]} €`,
+        facetId: fid,
+        value: values[0],
+      });
+      continue;
+    }
+
+    for (const v of values) {
+      const match = facet?.values.find(
+        (x) => x.value.toLowerCase() === v.toLowerCase(),
+      );
+      const valueLabel = match
+        ? formatFacetValueLabel(facet?.type, match)
+        : v;
+      list.push({
+        key: `${fid}:${v}`,
+        label: `${prefix}: ${valueLabel}`,
+        facetId: fid,
+        value: v,
+      });
+    }
+  }
+  return list;
+}
+
+export function removeActiveFilterChip(
+  selection: TaxonomySelection,
+  chip: Pick<ActiveFilterChip, "facetId" | "value">,
+): TaxonomySelection {
+  if (chip.facetId === "q") return { ...selection };
+  const next = { ...selection };
+  const cur = next[chip.facetId] || [];
+  const filtered = cur.filter(
+    (x) => x.toLowerCase() !== chip.value.toLowerCase(),
+  );
+  if (filtered.length) next[chip.facetId] = filtered;
+  else delete next[chip.facetId];
+  return next;
+}
+
+/** Merge price draft into selection (source of truth for URL). */
+export function withPriceSelection(
+  selection: TaxonomySelection,
+  minPrice?: string | null,
+  maxPrice?: string | null,
+): TaxonomySelection {
+  const next = { ...selection };
+  if (minPrice !== undefined && minPrice !== null) {
+    const v = String(minPrice).trim();
+    if (v) next.price_min = [v];
+    else delete next.price_min;
+  }
+  if (maxPrice !== undefined && maxPrice !== null) {
+    const v = String(maxPrice).trim();
+    if (v) next.price_max = [v];
+    else delete next.price_max;
+  }
+  return next;
+}

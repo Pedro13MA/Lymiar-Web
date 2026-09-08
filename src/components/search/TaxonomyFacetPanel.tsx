@@ -14,7 +14,7 @@ import {
 } from "@/lib/taxonomy-facets";
 import { cn } from "@/lib/utils";
 
-const PREVIEW = 5;
+const PREVIEW = 8;
 
 type PanelProps = {
   facet: TaxonomyFacet;

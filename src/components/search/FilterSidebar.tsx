@@ -1,18 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type KeyboardEvent } from "react";
 import { Input } from "@/components/ui/input";
 import { TaxonomyFilters } from "@/components/search/TaxonomyFilters";
 import type { FacetBucket, SearchFacets, TaxonomyFacet } from "@/lib/api";
 import {
   clearTaxonomySelection,
   hasTaxonomyFacets,
+  PRICE_INPUT_FACET_IDS,
   type TaxonomySelection,
 } from "@/lib/taxonomy-facets";
 import { storeDisplayName } from "@/lib/storeLogos";
 import { cn } from "@/lib/utils";
 
-const BRAND_PREVIEW = 5;
+const BRAND_PREVIEW = 8;
 
 export type FilterValues = {
   category: string;
@@ -399,10 +400,19 @@ export function FilterSidebar({
 }: Props) {
   const useTaxonomy = hasTaxonomyFacets(taxonomyFacets);
   const subcategories = facets.subcategories ?? [];
+  const panelFacets = (taxonomyFacets || []).filter(
+    (f) => !PRICE_INPUT_FACET_IDS.has(f.id),
+  );
 
   const handleClear = () => {
-    onTaxonomySelectionChange?.(clearTaxonomySelection());
     onClear();
+  };
+
+  const onPriceKeyDown = (e: KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      onApplyPrice();
+    }
   };
 
   const inner = (
@@ -417,6 +427,35 @@ export function FilterSidebar({
           onClick={handleClear}
         >
           Limpar
+        </button>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--hm-faint,#8b9aab)]">
+          Intervalo de preço (€)
+        </p>
+        <div className="flex gap-2">
+          <Input
+            inputMode="decimal"
+            placeholder="Mín"
+            value={minDraft}
+            onChange={(e) => onMinDraft(e.target.value)}
+            onKeyDown={onPriceKeyDown}
+            className="h-9"
+            aria-label="Preço mínimo"
+          />
+          <Input
+            inputMode="decimal"
+            placeholder="Máx"
+            value={maxDraft}
+            onChange={(e) => onMaxDraft(e.target.value)}
+            onKeyDown={onPriceKeyDown}
+            className="h-9"
+            aria-label="Preço máximo"
+          />
+        </div>
+        <button type="button" className="catalog-cta w-full" onClick={onApplyPrice}>
+          Aplicar preço
         </button>
       </div>
 
@@ -454,9 +493,9 @@ export function FilterSidebar({
         </label>
       ) : null}
 
-      {useTaxonomy && taxonomyFacets && onTaxonomySelectionChange ? (
+      {useTaxonomy && panelFacets.length && onTaxonomySelectionChange ? (
         <TaxonomyFilters
-          facets={taxonomyFacets}
+          facets={panelFacets}
           selection={taxonomySelection}
           onChange={onTaxonomySelectionChange}
           showHeader={false}
@@ -482,36 +521,11 @@ export function FilterSidebar({
           itemKey={(item) => `cat-${item.label}`}
         />
       ) : null}
-
-      <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--hm-faint,#8b9aab)]">
-          Intervalo de preço (€)
-        </p>
-        <div className="flex gap-2">
-          <Input
-            inputMode="decimal"
-            placeholder="Mín"
-            value={minDraft}
-            onChange={(e) => onMinDraft(e.target.value)}
-            className="h-9"
-          />
-          <Input
-            inputMode="decimal"
-            placeholder="Máx"
-            value={maxDraft}
-            onChange={(e) => onMaxDraft(e.target.value)}
-            className="h-9"
-          />
-        </div>
-        <button type="button" className="catalog-cta w-full" onClick={onApplyPrice}>
-          Aplicar preço
-        </button>
-      </div>
     </>
   );
 
   if (embedded) {
-    return <div className="space-y-6 border-t border-[var(--hm-line,#dde3ea)] pt-5">{inner}</div>;
+    return <div className="space-y-6">{inner}</div>;
   }
 
   return (
