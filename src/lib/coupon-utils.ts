@@ -6,9 +6,13 @@ export function normalizeCouponStoreSlug(slug: string): string {
   const s = (slug || "").trim().toLowerCase();
   if (s.startsWith("worten")) return "worten";
   if (s.startsWith("globaldata")) return "globaldata";
+  if (s.startsWith("powerplanet")) return "powerplanet";
+  if (s.startsWith("adidas")) return "adidas";
   if (s.startsWith("fnac")) return "fnac";
   if (s.startsWith("pccomponentes")) return "pccomponentes";
-  if (s.startsWith("amazon")) return "amazon";
+  if (s.startsWith("lumories")) return "lumories";
+  if (s.startsWith("ottocast")) return "ottocast";
+  if (s.startsWith("amazon")) return "other";
   return s;
 }
 
@@ -106,7 +110,6 @@ export async function copyCouponCode(code: string): Promise<boolean> {
 export const STORE_BADGE_STYLES: Record<string, { bg: string; text: string; ring: string }> = {
   worten: { bg: "bg-red-600", text: "text-white", ring: "ring-red-200" },
   globaldata: { bg: "bg-sky-700", text: "text-white", ring: "ring-sky-200" },
-  amazon: { bg: "bg-amber-600", text: "text-white", ring: "ring-amber-200" },
   pccomponentes: { bg: "bg-orange-600", text: "text-white", ring: "ring-orange-200" },
   default: { bg: "bg-slate-700", text: "text-white", ring: "ring-slate-200" },
 };

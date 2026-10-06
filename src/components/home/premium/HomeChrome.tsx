@@ -34,7 +34,7 @@ export function HomeHeader() {
           role={showHeaderSearch ? "search" : undefined}
           aria-hidden={!showHeaderSearch}
         >
-          <SearchTypeahead compact placeholder="Pesquisar produto…" />
+          <SearchTypeahead compact placeholder="Procurar produto…" />
         </div>
         {!showHeaderSearch ? <div className="min-w-0 flex-1" aria-hidden /> : null}
         <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
@@ -53,7 +53,6 @@ export function HomeFooter() {
         { href: "/categorias/", label: "Categorias" },
         { href: "/mercado/", label: "Mercado" },
         { href: "/catalog/", label: "Explorar" },
-        { href: "/#cupoes", label: "Cupões" },
       ],
     },
     {
@@ -88,7 +87,7 @@ export function HomeFooter() {
               {BRAND_TAGLINE}
             </p>
             <p className="mt-3 text-sm text-slate-400">
-              O Bloomberg dos preços de tecnologia.
+              Preços observados em Portugal — sem previsões inventadas.
             </p>
           </div>
           <div className="grid flex-1 grid-cols-2 gap-8 sm:grid-cols-4">

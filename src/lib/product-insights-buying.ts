@@ -108,19 +108,19 @@ export function computeProductInsights(product: Product): ProductInsights {
   const prices = history.map((h) => h.price);
   const cur = product.currentPrice > 0 ? product.currentPrice : null;
   let hmin =
-    product.historicalMin > 0
+    product.historicalMin != null && product.historicalMin > 0
       ? product.historicalMin
       : prices.length
         ? Math.min(...prices)
         : null;
   let hmax =
-    product.historicalMax > 0
+    product.historicalMax != null && product.historicalMax > 0
       ? product.historicalMax
       : prices.length
         ? Math.max(...prices)
         : null;
   const avg =
-    product.avg30d > 0
+    product.avg30d != null && product.avg30d > 0
       ? product.avg30d
       : prices.length
         ? prices.reduce((s, p) => s + p, 0) / prices.length
@@ -196,41 +196,42 @@ export function computeProductInsights(product: Product): ProductInsights {
     else competition = "moderate_spread";
   } else if (offerPrices.length === 1) competition = "single_store";
 
+  let changes = 0;
+  for (let i = 1; i < prices.length; i += 1) {
+    if (prices[i] !== prices[i - 1]) changes += 1;
+  }
+
   let conf = 0;
-  conf += Math.min(40, n * 4);
-  conf += Math.min(25, stores * 8);
-  conf += Math.min(25, Math.floor(span / 7) * 3);
-  conf += Math.min(10, Math.floor(kc / 10));
+  conf += Math.min(32, n * 3);
+  conf += Math.min(18, stores * 6);
+  conf += Math.min(28, Math.floor(span / 7) * 4);
+  conf += Math.min(14, changes * 2);
+  conf += Math.min(12, Math.floor(kc / 8));
   if (n < 3) conf = Math.min(conf, 35);
+  else if (changes === 0 && span >= 14) conf = Math.min(conf, 58);
   const confidence = Math.max(0, Math.min(100, conf));
 
   let recommendation: InsightRecommendation = "WATCH";
+  // Constituição: fallback local nunca inventa BUY/WAIT — só o Hub ConsumerDecision.
   if (n < 5 || position === "insufficient" || confidence < 40) {
     recommendation = "INSUFFICIENT_DATA";
-  } else if (
-    position === "near_minimum" &&
-    (trend === "stable" || trend === "falling") &&
-    volatility !== "high"
-  ) {
-    recommendation = "BUY_NOW";
-  } else if (
-    (position === "near_minimum" || position === "close_to_minimum") &&
-    trend !== "rising"
-  ) {
-    recommendation = "GOOD_PRICE";
-  } else if (position === "elevated" || position === "far_above") {
-    recommendation = "WAIT";
+  } else {
+    recommendation = "WATCH";
   }
 
   let dq = 0;
-  if (n >= 30) dq += 2;
-  else if (n >= 10) dq += 1;
-  if (span >= 90) dq += 1;
-  else if (span >= 30) dq += 0.5;
+  if (span >= 90) dq += 1.5;
+  else if (span >= 30) dq += 1;
+  else if (span >= 14) dq += 0.5;
+  if (n >= 45) dq += 1.5;
+  else if (n >= 20) dq += 1;
+  else if (n >= 8) dq += 0.5;
+  if (changes >= 6) dq += 1;
+  else if (changes >= 3) dq += 0.5;
   if (stores >= 3) dq += 1;
   else if (stores >= 2) dq += 0.5;
-  if (kc >= 60) dq += 1;
-  else if (kc >= 30) dq += 0.5;
+  if (kc >= 70) dq += 1;
+  else if (kc >= 40) dq += 0.5;
   const dataQuality = Math.max(1, Math.min(5, Math.round(dq) || 1));
 
   const trendLabel: Record<string, string> = {
@@ -345,10 +346,14 @@ export function computeProductInsights(product: Product): ProductInsights {
 
   const pros: string[] = [];
   const cons: string[] = [];
-  if (position === "near_minimum" || position === "close_to_minimum")
+  if (
+    (position === "near_minimum" || position === "close_to_minimum") &&
+    n >= 10
+  )
     pros.push("Preço próximo do mínimo observado");
   if (availability === "many") pros.push("Boa disponibilidade entre lojas");
-  if (volatility === "low") pros.push("Baixa volatilidade no histórico observado");
+  if (volatility === "low" && n >= 10)
+    pros.push("Baixa volatilidade no histórico observado");
   if (hasCoupon) pros.push("Cupão disponível na loja (informativo)");
   if (n < 10) cons.push("Pouco histórico observado");
   if (stores <= 1) cons.push("Poucas lojas com preço");
@@ -446,40 +451,90 @@ export function computeProductInsights(product: Product): ProductInsights {
 
 export function resolveProductInsights(product: Product): ProductInsights {
   const api = product.insights;
-  if (api && api.recommendation && Array.isArray(api.cards) && api.cards.length) {
+  const fromApi =
+    api && api.recommendation && Array.isArray(api.cards) && api.cards.length
+      ? {
+          ...api,
+          recommendation: api.recommendation as InsightRecommendation,
+          recommendationLabel:
+            api.recommendationLabel ||
+            REC_LABEL[api.recommendation as InsightRecommendation] ||
+            api.recommendation,
+          confidence:
+            typeof product.recommendationConfidence === "number"
+              ? product.recommendationConfidence
+              : typeof api.confidence === "number"
+                ? api.confidence
+                : 0,
+          cards: api.cards as InsightCard[],
+          summary: api.summary || [],
+          pros: api.pros || [],
+          cons: api.cons || [],
+          timeline: (api.timeline || []) as InsightTimelineEvent[],
+          currentPosition: api.currentPosition || "insufficient",
+          currentPositionLabel:
+            api.currentPositionLabel ||
+            POSITION_LABEL[api.currentPosition || ""] ||
+            "",
+          priceTrend: api.priceTrend || "insufficient",
+          priceTrendLabel: api.priceTrendLabel || "",
+          availability: api.availability || "none",
+          availabilityLabel: api.availabilityLabel || "",
+          priceVolatility: api.priceVolatility || "insufficient",
+          priceVolatilityLabel: api.priceVolatilityLabel || "",
+          dataQuality: api.dataQuality || 1,
+        }
+      : computeProductInsights(product);
+
+  // Constituição: ConsumerDecision da API manda no veredicto comprador.
+  const cd = product.consumerDecision?.verdict;
+  if (cd === "BUY") {
     return {
-      ...api,
-      recommendation: api.recommendation as InsightRecommendation,
-      recommendationLabel:
-        api.recommendationLabel ||
-        REC_LABEL[api.recommendation as InsightRecommendation] ||
-        api.recommendation,
-      confidence:
-        typeof product.recommendationConfidence === "number"
-          ? product.recommendationConfidence
-          : typeof api.confidence === "number"
-            ? api.confidence
-            : 0,
-      cards: api.cards as InsightCard[],
-      summary: api.summary || [],
-      pros: api.pros || [],
-      cons: api.cons || [],
-      timeline: (api.timeline || []) as InsightTimelineEvent[],
-      currentPosition: api.currentPosition || "insufficient",
-      currentPositionLabel:
-        api.currentPositionLabel ||
-        POSITION_LABEL[api.currentPosition || ""] ||
-        "",
-      priceTrend: api.priceTrend || "insufficient",
-      priceTrendLabel: api.priceTrendLabel || "",
-      availability: api.availability || "none",
-      availabilityLabel: api.availabilityLabel || "",
-      priceVolatility: api.priceVolatility || "insufficient",
-      priceVolatilityLabel: api.priceVolatilityLabel || "",
-      dataQuality: api.dataQuality || 1,
+      ...fromApi,
+      recommendation: "BUY_NOW",
+      recommendationLabel: resolveConsumerInsightLabel(product) || REC_LABEL.BUY_NOW,
     };
   }
-  return computeProductInsights(product);
+  if (cd === "FAIR") {
+    return {
+      ...fromApi,
+      recommendation: "GOOD_PRICE",
+      recommendationLabel: resolveConsumerInsightLabel(product) || "Preço justo",
+    };
+  }
+  if (cd === "HIGH") {
+    return {
+      ...fromApi,
+      recommendation: "WATCH",
+      recommendationLabel:
+        resolveConsumerInsightLabel(product) || "Pode encontrar melhor",
+    };
+  }
+  if (cd === "WAIT") {
+    return {
+      ...fromApi,
+      recommendation: "WAIT",
+      recommendationLabel: resolveConsumerInsightLabel(product) || REC_LABEL.WAIT,
+    };
+  }
+  if (cd === "UNKNOWN") {
+    return {
+      ...fromApi,
+      recommendation: "INSUFFICIENT_DATA",
+      recommendationLabel:
+        resolveConsumerInsightLabel(product) || REC_LABEL.INSUFFICIENT_DATA,
+    };
+  }
+  // Sem CD: nunca promover insights locais/API a BUY/WAIT de compra.
+  const rec = fromApi.recommendation;
+  if (rec === "BUY_NOW" || rec === "WAIT" || rec === "GOOD_PRICE") {
+    return {
+      ...fromApi,
+      recommendation: "INSUFFICIENT_DATA",
+      recommendationLabel: REC_LABEL.INSUFFICIENT_DATA,
+    };
+  }
+  return fromApi;
 }
 
 export function recommendationShortLabel(
@@ -489,22 +544,9 @@ export function recommendationShortLabel(
   return REC_LABEL[rec as InsightRecommendation] || String(rec);
 }
 
-/** Rótulo curto para projetos / cart (factual). */
+/** Rótulo curto para projetos / cart — só ConsumerDecision ou «Sem dados suficientes». */
 export function priceInsightShort(product: Product): string {
   const fromConsumer = resolveConsumerInsightLabel(product);
   if (fromConsumer) return fromConsumer;
-  const i = resolveProductInsights(product);
-  if (i.recommendation === "INSUFFICIENT_DATA") return "Poucos dados";
-  if (
-    i.currentPosition === "near_minimum" ||
-    i.currentPosition === "close_to_minimum"
-  )
-    return "Bom preço";
-  if (i.currentPosition === "average") return "Preço médio";
-  if (
-    i.currentPosition === "elevated" ||
-    i.currentPosition === "far_above"
-  )
-    return "Preço elevado";
-  return "Poucos dados";
+  return "Sem dados suficientes";
 }

@@ -35,6 +35,8 @@ export type ApiProductSummary = {
   avg30d?: number | null;
   historicalMin?: number | null;
   historicalMax?: number | null;
+  sampleDays?: number | null;
+  spanDays?: number | null;
   dropTodayPct?: number | null;
   lymiarIndex?: number;
   /** TEMP alias — API VPS ainda pode emitir limiarIndex (Fase B4.2). */
@@ -320,6 +322,9 @@ export type CategoryProductsResponse = {
 
 export type SearchSortBy =
   | "lymiar_desc"
+  | "consumer_desc"
+  | "buy_desc"
+  | "fair_desc"
   | "price_asc"
   | "price_desc"
   | "discount_desc";
@@ -386,6 +391,9 @@ export type ApiOffer = {
   shippingInfo?: ApiShippingInfo | string | null;
   smartBasketOpportunity?: boolean;
   observedAt?: string | null;
+  staleHours?: number | null;
+  isFresh?: boolean | null;
+  imageUrl?: string | null;
 };
 
 export type ApiProductDetail = {
@@ -404,6 +412,8 @@ export type ApiProductDetail = {
   avg30d?: number | null;
   historicalMin?: number | null;
   historicalMax?: number | null;
+  sampleDays?: number | null;
+  spanDays?: number | null;
   dropTodayPct?: number | null;
   originalPrice?: number | null;
   isOnSale?: boolean;
@@ -486,9 +496,9 @@ export type ApiProductDetail = {
   knowledgeCompleteness?: number | null;
   /** FASE 7.16 — opcional */
   insights?: Record<string, unknown> | null;
-  /** Canónico — BUY | WAIT | UNKNOWN (Hub ConsumerDecision engine) */
+  /** Canónico — BUY | FAIR | WAIT | UNKNOWN (Hub ConsumerDecision engine) */
   consumerDecision?: {
-    verdict: "BUY" | "WAIT" | "UNKNOWN";
+    verdict: "BUY" | "FAIR" | "HIGH" | "WAIT" | "UNKNOWN";
     confidence: number;
     reason: string;
     evidence: Record<string, unknown>;
@@ -687,6 +697,27 @@ export function coerceLymiarIndex(
 export function summaryToProduct(s: ApiProductSummary): Product {
   const score = readSummaryLymiarScore(s);
   const index = coerceLymiarIndex(score, s.summary || "");
+  const histMin =
+    s.historicalMin != null && Number(s.historicalMin) > 0
+      ? Number(s.historicalMin)
+      : null;
+  const histMax =
+    s.historicalMax != null && Number(s.historicalMax) > 0
+      ? Number(s.historicalMax)
+      : null;
+  // Honesty: isHistoricalMin exige mínimo observado + amostra suficiente (nunca inventar).
+  const evidenceSample =
+    s.consumerDecision?.evidence?.sample_days != null &&
+    Number.isFinite(Number(s.consumerDecision.evidence.sample_days))
+      ? Number(s.consumerDecision.evidence.sample_days)
+      : null;
+  const sampleDays =
+    evidenceSample ??
+    (s.sampleDays != null && Number.isFinite(Number(s.sampleDays))
+      ? Number(s.sampleDays)
+      : null);
+  const isHistMin =
+    Boolean(s.isHistoricalMin) && histMin != null && sampleDays != null && sampleDays >= 5;
   const decision: DecisionScore = {
     finalScore: score,
     publish: s.semaphore === "buy",
@@ -703,10 +734,10 @@ export function summaryToProduct(s: ApiProductSummary): Product {
     },
     discountPct: Number(s.realDiscountPct ?? s.discountPct ?? 0),
     dealQuality: "NORMAL",
-    opportunityType: s.isHistoricalMin ? "NEW_LOW" : "NOISE",
+    opportunityType: isHistMin ? "NEW_LOW" : "NOISE",
     historicalAvg: s.avg30d ?? null,
-    historicalMin: s.historicalMin ?? null,
-    isHistoricalMin: Boolean(s.isHistoricalMin),
+    historicalMin: histMin,
+    isHistoricalMin: isHistMin,
     cheapestStore: s.cheapestStore ?? null,
     feedCategory: "other",
     bullets: [s.summary],
@@ -741,9 +772,11 @@ export function summaryToProduct(s: ApiProductSummary): Product {
     listPrice: s.listPrice ?? undefined,
     effectivePrice: s.effectivePrice ?? undefined,
     savings: s.savings ?? undefined,
-    avg30d: s.avg30d ?? s.currentPrice,
-    historicalMin: s.historicalMin ?? s.currentPrice,
-    historicalMax: s.historicalMax ?? s.currentPrice,
+    avg30d: s.avg30d ?? null,
+    historicalMin: histMin,
+    historicalMax: histMax,
+    sampleDays: s.sampleDays ?? null,
+    spanDays: s.spanDays ?? null,
     dropTodayPct: s.dropTodayPct ?? undefined,
     history: [],
     offers: s.offerUrl
@@ -775,7 +808,12 @@ export function summaryToProduct(s: ApiProductSummary): Product {
     dealScore: s.dealScore ?? undefined,
     consumerDecision: s.consumerDecision
       ? {
-          verdict: s.consumerDecision.verdict as "BUY" | "WAIT" | "UNKNOWN",
+          verdict: s.consumerDecision.verdict as
+            | "BUY"
+            | "FAIR"
+            | "HIGH"
+            | "WAIT"
+            | "UNKNOWN",
           confidence: Number(s.consumerDecision.confidence) || 0,
           reason: String(s.consumerDecision.reason || ""),
           evidence: s.consumerDecision.evidence ?? undefined,
@@ -863,7 +901,7 @@ export function smartCouponToPromotion(c: SmartCoupon, storeName?: string): Prom
     terms: c.terms || c.conditions || null,
     conditions: c.terms || c.conditions || null,
     code: c.code || null,
-    url: hasOfficial ? officialUrl : `/cupoes/${encodeURIComponent(slug)}/`,
+    url: hasOfficial ? officialUrl : "",
     promotionType: "voucher",
     discountKind: kind,
     discountValue: value,
@@ -894,6 +932,9 @@ export function detailToProduct(d: ApiProductDetail): Product {
     shippingDetails: mapShippingDetails(o.shipping_info ?? o.shippingInfo),
     smartBasketOpportunity: Boolean(o.smartBasketOpportunity),
     observedAt: o.observedAt ?? null,
+    staleHours: o.staleHours ?? null,
+    isFresh: o.isFresh ?? null,
+    imageUrl: o.imageUrl ?? null,
   }));
   const listPrice = d.currentPrice;
   const effectivePrice = null;
@@ -912,6 +953,29 @@ export function detailToProduct(d: ApiProductDetail): Product {
   const activeCampaign = d.activeCampaign
     ? mapStoreCampaign(d.activeCampaign as ApiStoreCampaign)
     : null;
+  const histMin =
+    d.historicalMin != null && Number(d.historicalMin) > 0
+      ? Number(d.historicalMin)
+      : null;
+  const histMax =
+    d.historicalMax != null && Number(d.historicalMax) > 0
+      ? Number(d.historicalMax)
+      : null;
+  const evidenceSample =
+    d.consumerDecision?.evidence?.sample_days != null &&
+    Number.isFinite(Number(d.consumerDecision.evidence.sample_days))
+      ? Number(d.consumerDecision.evidence.sample_days)
+      : null;
+  const sampleDays =
+    evidenceSample ??
+    (d.sampleDays != null && Number.isFinite(Number(d.sampleDays))
+      ? Number(d.sampleDays)
+      : null);
+  const isHistMin =
+    Boolean(d.decision?.isHistoricalMin) &&
+    histMin != null &&
+    sampleDays != null &&
+    sampleDays >= 5;
   return {
     slug: d.slug,
     ean: d.ean,
@@ -930,10 +994,12 @@ export function detailToProduct(d: ApiProductDetail): Product {
       buyableOffer?.observedAt ??
       bestOffer?.observedAt ??
       null,
-    avg30d: d.avg30d ?? statsPrice ?? displayPrice,
-    // Nunca inventar min/máx a partir de listagem esgotada.
-    historicalMin: d.historicalMin ?? statsPrice ?? 0,
-    historicalMax: d.historicalMax ?? statsPrice ?? 0,
+    avg30d: d.avg30d ?? null,
+    // Honesty: sem inventar min/máx a partir do preço actual.
+    historicalMin: histMin,
+    historicalMax: histMax,
+    sampleDays: d.sampleDays ?? null,
+    spanDays: d.spanDays ?? null,
     dropTodayPct: d.dropTodayPct ?? undefined,
     history: d.history || [],
     offers,
@@ -1000,8 +1066,8 @@ export function detailToProduct(d: ApiProductDetail): Product {
       dealQuality: d.decision.dealQuality as DecisionScore["dealQuality"],
       opportunityType: d.decision.opportunityType as DecisionScore["opportunityType"],
       historicalAvg: d.decision.historicalAvg,
-      historicalMin: d.decision.historicalMin,
-      isHistoricalMin: d.decision.isHistoricalMin,
+      historicalMin: histMin ?? d.decision.historicalMin ?? null,
+      isHistoricalMin: isHistMin,
       cheapestStore: d.decision.cheapestStore,
       feedCategory: d.decision.feedCategory || "other",
       bullets: d.decision.bullets || [],
@@ -1049,7 +1115,10 @@ export function mapPromotion(p: ApiPromotion): Promotion {
     storeName: p.storeName,
     storeSlug: p.storeSlug,
     title: p.title,
+    campaignRef: p.campaignRef || null,
     description: p.description,
+    terms: p.description || null,
+    conditions: p.description || null,
     code: p.code,
     url: p.url,
     promotionType: p.promotionType,
@@ -1133,7 +1202,7 @@ export async function suggestSearch(
         category: p.category,
         imageUrl: p.imageUrl,
         currentPrice: p.currentPrice,
-        url: `/p/?id=${encodeURIComponent(p.slug)}`,
+        url: `/p/${encodeURIComponent(p.slug)}/`,
         type: "product",
       })),
       categories: [],
@@ -1204,7 +1273,7 @@ export async function getCategoryProducts(
   const params = new URLSearchParams({
     limit: String(opts?.limit ?? 24),
     offset: String(opts?.offset ?? 0),
-    sort_by: opts?.sortBy || "lymiar_desc",
+    sort_by: opts?.sortBy || "consumer_desc",
   });
   if (opts?.q?.trim()) params.set("q", opts.q.trim());
   if (opts?.taxonomyFilters) {
@@ -1259,19 +1328,23 @@ export async function getDealsFair(
 export type DealsRadarResponse = {
   items?: ApiProductSummary[];
   buy: ApiProductSummary[];
+  fair?: ApiProductSummary[];
+  high?: ApiProductSummary[];
   wait: ApiProductSummary[];
   unknown: ApiProductSummary[];
   dayKey?: string;
   rotationSlot?: number;
   cacheTtlSec?: number;
   countBuy?: number;
+  countFair?: number;
+  countHigh?: number;
   countWait?: number;
   countUnknown?: number;
 };
 
 /** Homepage radar — um único round-trip (pack diário + decisões). */
 export async function getDealsRadar(
-  limitEach = 20,
+  limitEach = 30,
   opts?: { signal?: AbortSignal },
 ): Promise<DealsRadarResponse | null> {
   return apiGet<DealsRadarResponse | null>(

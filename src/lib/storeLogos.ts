@@ -3,13 +3,36 @@
 export type StoreLogoMeta = {
   slug: string;
   name: string;
-  /** Domínio para favicon (Google s2). */
+  /** Domínio para favicon fallback (Google s2). */
   domain: string;
 };
 
 function favicon(domain: string): string {
-  return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+  return `https://www.google.com/s2/favicons?domain=${domain}&sz=256`;
 }
+
+/** Slugs com asset local em /public/stores/ — PNG/SVG primeiro (marca legível). */
+const LOCAL_ASSET: Record<string, string> = {
+  worten: "/stores/worten.png",
+  globaldata: "/stores/globaldata.png",
+  powerplanet: "/stores/powerplanet.png",
+  lumories: "/stores/lumories.png",
+  padelmarket: "/stores/padelmarket.png",
+  enjoythewood: "/stores/enjoythewood.png",
+  ottocast: "/stores/ottocast.png",
+  ultrahuman: "/stores/ultrahuman.png",
+  outin: "/stores/outin.png",
+  adidas: "/stores/adidas.png",
+  fnac: "/stores/fnac.png",
+  pcdiga: "/stores/pcdiga.png",
+  "radio-popular": "/stores/radio-popular.png",
+  pccomponentes: "/stores/pccomponentes.png",
+  allpowers: "/stores/allpowers.png",
+  castro: "/stores/castro.png",
+};
+
+/** @deprecated use LOCAL_ASSET */
+const LOCAL_PNG = new Set(Object.keys(LOCAL_ASSET));
 
 /** Registo central de lojas com logo. */
 export const STORE_LOGOS: StoreLogoMeta[] = [
@@ -17,7 +40,6 @@ export const STORE_LOGOS: StoreLogoMeta[] = [
   { slug: "worten", name: "Worten", domain: "www.worten.pt" },
   { slug: "fnac", name: "Fnac", domain: "www.fnac.pt" },
   { slug: "pcdiga", name: "PCDiga", domain: "www.pcdiga.com" },
-  { slug: "amazon", name: "Amazon", domain: "www.amazon.es" },
   { slug: "radio-popular", name: "Rádio Popular", domain: "www.radiopopular.pt" },
   { slug: "pccomponentes", name: "PCComponentes", domain: "www.pccomponentes.pt" },
   { slug: "powerplanet", name: "Powerplanet", domain: "www.powerplanetonline.com" },
@@ -27,6 +49,7 @@ export const STORE_LOGOS: StoreLogoMeta[] = [
   { slug: "enjoythewood", name: "Enjoy the Wood", domain: "www.enjoythewood.com" },
   { slug: "ultrahuman", name: "Ultrahuman", domain: "www.ultrahuman.com" },
   { slug: "outin", name: "OutIn", domain: "outin.com" },
+  { slug: "adidas", name: "Adidas", domain: "www.adidas.pt" },
   { slug: "allpowers", name: "ALLPOWERS", domain: "www.allpowers.com" },
   { slug: "castro", name: "Castro Electrónica", domain: "www.castroelectronica.pt" },
   { slug: "switch", name: "Switch Technology", domain: "www.switch.pt" },
@@ -40,8 +63,6 @@ const ALIASES: Record<string, string> = {
   "pc diga": "pcdiga",
   pccomponentes_pt: "pccomponentes",
   "pc componentes": "pccomponentes",
-  amazon_es: "amazon",
-  amazon_pt: "amazon",
   global_data: "globaldata",
   wortenpt: "worten",
   "worten pt": "worten",
@@ -58,6 +79,9 @@ const ALIASES: Record<string, string> = {
   enjoythewood: "enjoythewood",
   lighting: "enjoythewood",
   ottocastpt: "ottocast",
+  adidaspt: "adidas",
+  "adidas pt": "adidas",
+  "adidas.pt": "adidas",
 };
 
 function normalizeStoreKey(raw: string): string {
@@ -74,11 +98,13 @@ export function getStoreLogoMeta(slugOrName: string): StoreLogoMeta | undefined 
   );
 }
 
-/** URL do logótipo (favicon estável). Sempre devolve string utilizável. */
+/** URL do logótipo — asset local → favicon 256. */
 export function storeLogoUrl(slugOrName: string): string {
   const meta = getStoreLogoMeta(slugOrName);
+  const slug = meta?.slug || normalizeStoreKey(slugOrName);
+  if (LOCAL_ASSET[slug]) return LOCAL_ASSET[slug];
+  if (LOCAL_PNG.has(slug)) return `/stores/${slug}.png`;
   if (meta) return favicon(meta.domain);
-  // Fallback genérico — iniciais no componente se falhar o load
   return favicon("example.com");
 }
 
