@@ -13,10 +13,5 @@ Disallow: /notificacoes/
 Disallow: /control-center/
 Disallow: /catalogo/
 
+# Index canónico (inclui categorias, landing e products 1–3)
 Sitemap: https://lymiar.com/sitemap-index.xml
-Sitemap: https://lymiar.com/sitemap.xml
-Sitemap: https://lymiar.com/sitemap-categorias.xml
-Sitemap: https://lymiar.com/sitemap-landing.xml
-Sitemap: https://lymiar.com/sitemap-products-1.xml
-Sitemap: https://lymiar.com/sitemap-products-2.xml
-Sitemap: https://lymiar.com/sitemap-products-3.xml

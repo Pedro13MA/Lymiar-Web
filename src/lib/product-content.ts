@@ -3,6 +3,7 @@
  * Nunca inventa especificações técnicas. Nunca mostra "Other" nem texto genérico.
  */
 
+import { canShowCardPriceExtremes } from "@/lib/consumer-decision";
 import { displayCategoryLabel, isOtherLabel } from "@/lib/product-display";
 import type { Product } from "@/lib/types";
 
@@ -375,8 +376,8 @@ export function buildAutoDescription(product: Product): {
   if (product.offers.length > 1) {
     benefits.push(`Disponível em ${product.offers.length} lojas observadas.`);
   }
-  if (product.decision.isHistoricalMin) {
-    benefits.push("Preço actual próximo do mínimo histórico observado.");
+  if (canShowCardPriceExtremes(product) && product.decision.isHistoricalMin) {
+    benefits.push("Preço atual próximo do mínimo histórico observado.");
   }
   if (product.storeCouponsAvailable) {
     benefits.push("Há cupões ou campanhas informativas associadas a lojas.");
@@ -413,11 +414,15 @@ export function buildProductFaq(product: Product): ProductFaqItem[] {
       answer:
         condition === "NEW"
           ? "O estado observado no Lymiar é Novo, com base nos dados das lojas."
-          : `O estado observado é «${conditionLabel}». Confirme sempre na página da loja antes de comprar.`,
+          : `O estado observado é «${conditionLabel}». Confirma sempre na página da loja antes de comprar.`,
     });
   }
 
-  if (product.historicalMin > 0) {
+  if (
+    canShowCardPriceExtremes(product) &&
+    product.historicalMin != null &&
+    product.historicalMin > 0
+  ) {
     items.push({
       question: "Qual o preço mais baixo observado?",
       answer: `O mínimo histórico registado no Lymiar é ${product.historicalMin.toFixed(2)} € (dados observados, sem previsões).`,
@@ -435,7 +440,7 @@ export function buildProductFaq(product: Product): ProductFaqItem[] {
     items.push({
       question: "Quando costuma baixar?",
       answer:
-        "O Lymiar não prevê descidas futuras. Use o gráfico de histórico e o Índice Lymiar para ver se o momento actual é favorável face ao passado observado.",
+        "O Lymiar não prevê descidas futuras. Usa o gráfico de histórico e o veredicto nesta página para ver se o momento atual é favorável face ao passado observado.",
     });
   }
 
@@ -444,7 +449,7 @@ export function buildProductFaq(product: Product): ProductFaqItem[] {
     items.push({
       question: "Tem garantia?",
       answer:
-        "A garantia depende da loja e do estado do produto. Consulte os termos na página do retalhista antes de concluir a compra.",
+        "A garantia depende da loja e do estado do produto. Consulta os termos na página do retalhista antes de concluir a compra.",
     });
   }
 
@@ -454,14 +459,21 @@ export function buildProductFaq(product: Product): ProductFaqItem[] {
 export function collectImageUrls(product: Product): string[] {
   const urls: string[] = [];
   const seen = new Set<string>();
-  for (const u of product.imageUrls || []) {
-    if (u && !seen.has(u)) {
-      seen.add(u);
-      urls.push(u);
-    }
+  const push = (u?: string | null) => {
+    if (!u || seen.has(u)) return;
+    seen.add(u);
+    urls.push(u);
+  };
+  for (const u of product.imageUrls || []) push(u);
+  push(product.imageUrl);
+  // Qualquer loja com foto — fallback se a galeria canónica veio vazia ou incompleta.
+  for (const offer of product.offers || []) {
+    push(offer.imageUrl);
   }
-  if (product.imageUrl && !seen.has(product.imageUrl)) {
-    urls.unshift(product.imageUrl);
+  // Preferir imageUrl canónico no topo se existir.
+  if (product.imageUrl && urls[0] !== product.imageUrl && seen.has(product.imageUrl)) {
+    const rest = urls.filter((u) => u !== product.imageUrl);
+    return [product.imageUrl, ...rest];
   }
   return urls;
 }

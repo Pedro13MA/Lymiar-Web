@@ -148,10 +148,26 @@ describe("product-content", () => {
   it("buildProductFaq — uses real condition and stores", () => {
     const faq = buildProductFaq(baseProduct());
     expect(faq.some((f) => f.question.includes("novo"))).toBe(true);
-    expect(faq.some((f) => f.answer.includes("620") || f.answer.includes("mínimo"))).toBe(
+    // Honesty: amostra fina → sem claim de mínimo histórico
+    expect(faq.some((f) => /m[ií]nimo/i.test(f.answer))).toBe(false);
+    expect(faq.every((f) => f.answer.trim().length > 0)).toBe(true);
+  });
+
+  it("buildProductFaq — mínimo histórico só com sample_days suficiente", () => {
+    const faq = buildProductFaq(
+      baseProduct({
+        sampleDays: 14,
+        consumerDecision: {
+          verdict: "BUY",
+          confidence: 0.8,
+          reason: "PRICE_NEAR_HISTORICAL_MIN",
+          evidence: { sample_days: 14 },
+        },
+      }),
+    );
+    expect(faq.some((f) => f.answer.includes("620") || /m[ií]nimo/i.test(f.answer))).toBe(
       true,
     );
-    expect(faq.every((f) => f.answer.trim().length > 0)).toBe(true);
   });
 
   it("collectImageUrls dedupes", () => {

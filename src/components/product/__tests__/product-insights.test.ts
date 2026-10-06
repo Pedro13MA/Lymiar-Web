@@ -89,6 +89,7 @@ function baseProduct(over: Partial<Product> = {}): Product {
     },
     seasonality: { timesBelowCurrent12m: 0, note: "", markers: [] },
     knowledgeCompleteness: 70,
+    sampleDays: 12,
     ...over,
   };
 }
@@ -107,9 +108,39 @@ describe("FASE 7.16 insights", () => {
     expect(i.summary.join(" ").toLowerCase()).toMatch(/evidências|insuficiente/);
   });
 
+  it("histórico fino não reivindica mínimo mesmo com isHistoricalMin", () => {
+    const i = computeProductInsights(
+      baseProduct({
+        sampleDays: 2,
+        consumerDecision: {
+          verdict: "UNKNOWN",
+          confidence: 0.2,
+          reason: "THIN_HISTORY",
+          evidence: { sample_days: 2 },
+        },
+        currentPrice: 108,
+        historicalMin: 108,
+        decision: {
+          ...baseProduct().decision,
+          isHistoricalMin: true,
+        },
+      }),
+    );
+    expect(i.currentPosition).toBe("insufficient");
+    expect(i.atNewMinimum).toBe(false);
+    expect(i.lowestHistorical).toBeNull();
+  });
+
   it("histórico completo perto do mínimo", () => {
     const i = computeProductInsights(
       baseProduct({
+        sampleDays: 12,
+        consumerDecision: {
+          verdict: "BUY",
+          confidence: 0.8,
+          reason: "PRICE_NEAR_HISTORICAL_MIN",
+          evidence: { sample_days: 12 },
+        },
         currentPrice: 108,
         historicalMin: 108,
         decision: {
@@ -119,7 +150,7 @@ describe("FASE 7.16 insights", () => {
       }),
     );
     expect(i.currentPosition).toBe("near_minimum");
-    expect(["BUY_NOW", "GOOD_PRICE"]).toContain(i.recommendation);
+    expect(i.recommendation).toBe("WATCH");
     expect(i.confidence).toBeGreaterThanOrEqual(40);
     expect(i.dataQuality).toBeGreaterThanOrEqual(1);
   });
@@ -179,6 +210,66 @@ describe("FASE 7.16 insights", () => {
     expect(i.recommendation).toBe("WATCH");
   });
 
+  it("sem ConsumerDecision não promove BUY_NOW local", () => {
+    const i = resolveProductInsights(
+      baseProduct({
+        insights: {
+          currentPosition: "near_minimum",
+          currentPositionLabel: "Perto do mínimo",
+          priceTrend: "stable",
+          priceTrendLabel: "Estável",
+          availability: "many",
+          availabilityLabel: "Muitas lojas",
+          priceVolatility: "low",
+          priceVolatilityLabel: "Baixa",
+          recommendation: "BUY_NOW",
+          recommendationLabel: "Comprar agora",
+          confidence: 80,
+          dataQuality: 4,
+          cards: [{ id: "x", tone: "positive", label: "Local" }],
+          summary: ["Inventado"],
+          pros: [],
+          cons: [],
+          timeline: [],
+        },
+      }),
+    );
+    expect(i.recommendation).toBe("INSUFFICIENT_DATA");
+  });
+
+  it("ConsumerDecision override insights recommendation", () => {
+    const i = resolveProductInsights(
+      baseProduct({
+        consumerDecision: {
+          verdict: "WAIT",
+          confidence: 0.8,
+          reason: "PRICE_ELEVATED_VS_HISTORY",
+        },
+        insights: {
+          currentPosition: "elevated",
+          currentPositionLabel: "Elevado",
+          priceTrend: "up",
+          priceTrendLabel: "A subir",
+          availability: "many",
+          availabilityLabel: "Muitas lojas",
+          priceVolatility: "low",
+          priceVolatilityLabel: "Baixa",
+          recommendation: "BUY_NOW",
+          recommendationLabel: "Comprar agora",
+          confidence: 90,
+          dataQuality: 3,
+          cards: [{ id: "x", tone: "good", label: "API card" }],
+          summary: ["Da API"],
+          pros: [],
+          cons: [],
+          timeline: [],
+        },
+      }),
+    );
+    expect(i.recommendation).toBe("WAIT");
+    expect(i.cards[0].label).toBe("API card");
+  });
+
   it("comparador inclui secção insights", () => {
     const rows = buildCompareRows([
       baseProduct({ slug: "a" }),
@@ -203,7 +294,7 @@ describe("FASE 7.16 insights", () => {
           history: [{ date: "2026-01-01", price: 100 }],
         }),
       ),
-    ).toBe("Poucos dados");
+    ).toBe("Sem dados suficientes");
   });
 
   it("pros/cons factuais para SEO", () => {

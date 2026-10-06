@@ -8,6 +8,10 @@ import type {
   Seasonality,
   SeasonalMarker,
 } from "@/lib/types";
+import {
+  CARD_HIST_SAMPLE_MIN_DAYS,
+  canShowCardPriceExtremes,
+} from "@/lib/consumer-decision";
 import { formatEUR, formatPct } from "@/lib/utils";
 
 const STORAGE_RE = /\b(\d+(?:[.,]\d+)?)\s*(tb|gb)\b/gi;
@@ -98,15 +102,11 @@ export function buildProductSummary(product: Product): string {
     };
     parts.push(labels[condition] || condition);
   }
+  // Honesty: nunca misturar PublishScore/lymiarIndex.summary no resumo ao comprador.
   if (parts.length === 0) {
-    return (
-      product.decision.lymiarIndex.summary ||
-      "Monitorizado pelo Lymiar com base no histórico de preços multi-loja."
-    );
+    return "Monitorizado pelo Lymiar com base no histórico de preços multi-loja.";
   }
   const lead = parts.slice(0, 4).join(" · ");
-  const indexHint = product.decision.lymiarIndex.summary?.trim();
-  if (indexHint && indexHint.length < 120) return `${lead}. ${indexHint}`;
   return `${lead}. Comparação factual entre lojas e histórico Lymiar.`;
 }
 
@@ -230,38 +230,160 @@ export type SeasonalityInsight = Seasonality & {
   sufficient: boolean;
   lowPricePeriods: string[];
   highPriceMonths: string[];
+  /** Meses (1–12) com preços tipicamente baixos nos dados. */
+  lowPriceMonthNumbers: number[];
   avgPromoDiscountPct: number | null;
   bestPromoDiscountPct: number | null;
+  /**
+   * Conselho temporal honesto (hipótese a partir do histórico).
+   * Nunca garante promoção futura.
+   */
+  timingAdvice: string | null;
 };
 
 function periodLabelForMonth(month: number): string {
+  if (month === 9) return "Setembro (início de época escolar)";
   if (month === 11) return "Novembro (campanhas de fim de ano)";
+  if (month === 12) return "Dezembro (época natalícia)";
   if (month === 1) return "Janeiro";
   if (month >= 6 && month <= 8) return "Campanhas de Verão";
   return MONTH_NAMES[month - 1];
+}
+
+/** Próximo mês baixo típico nos próximos `horizonMonths` (inclui mês actual). */
+export function buildSeasonalityTimingAdvice(
+  lowMonths: number[],
+  now = new Date(),
+  horizonMonths = 3,
+): string | null {
+  if (!lowMonths.length) return null;
+  const current = now.getUTCMonth() + 1; // 1–12
+  const upcoming: number[] = [];
+  for (let i = 0; i <= horizonMonths; i++) {
+    const m = ((current - 1 + i) % 12) + 1;
+    if (lowMonths.includes(m)) upcoming.push(m);
+  }
+  if (!upcoming.length) return null;
+
+  const labels = [...new Set(upcoming.map(periodLabelForMonth))];
+  const inCurrent = lowMonths.includes(current);
+  if (inCurrent && upcoming.length === 1) {
+    return `No histórico Lymiar, ${labels[0]} costuma coincidir com preços mais baixos para este produto. Não é uma recomendação de compra ou espera.`;
+  }
+  if (inCurrent) {
+    return `Neste período (${labels.join(", ")}), o histórico Lymiar associa preços tipicamente mais baixos. Facto sazonal — não substitui o veredicto de compra.`;
+  }
+  return `Nos próximos meses, ${labels.join(" / ")} costumam ter preços mais baixos no histórico Lymiar. Facto sazonal — não é garantia nem veredicto.`;
+}
+
+/** Prefer Hub seasonal evidence over client recompute (ConsumerDecision SoT). */
+export function seasonalityFromConsumerEvidence(
+  evidence: {
+    seasonal_low_months?: number[] | null;
+    seasonal_drop_pct?: number | null;
+    seasonal_months_covered?: number | null;
+    seasonal_months_labels_pt?: string[] | null;
+    seasonal_narrative_pt?: string | null;
+    seasonal_in_window?: boolean | null;
+  } | null | undefined,
+  timesBelowHint = 0,
+  now = new Date(),
+): SeasonalityInsight | null {
+  if (!evidence) return null;
+  const months = Array.isArray(evidence.seasonal_low_months)
+    ? evidence.seasonal_low_months
+        .map((m) => Number(m))
+        .filter((m) => Number.isFinite(m) && m >= 1 && m <= 12)
+    : [];
+  const covered = Number(evidence.seasonal_months_covered ?? 0);
+  const labels = Array.isArray(evidence.seasonal_months_labels_pt)
+    ? evidence.seasonal_months_labels_pt.map(String).filter(Boolean)
+    : [];
+  const narrative = String(evidence.seasonal_narrative_pt || "").trim();
+  const drop =
+    evidence.seasonal_drop_pct != null && Number.isFinite(Number(evidence.seasonal_drop_pct))
+      ? Number(evidence.seasonal_drop_pct)
+      : null;
+
+  // Hub só envia campos sazonais quando a política os calcula — sem meses e sem narrativa → não há evidência.
+  if (!months.length && !narrative && !labels.length) {
+    return null;
+  }
+  if (covered > 0 && covered < MIN_MONTHS_FOR_SEASONALITY && !narrative) {
+    return null;
+  }
+
+  const lowSet = new Set(months);
+  const markers: SeasonalMarker[] = Array.from({ length: 12 }, (_, i) => {
+    const month = i + 1;
+    if (lowSet.has(month)) {
+      return {
+        month,
+        label:
+          drop != null
+            ? `~${Math.round(drop)}% abaixo do habitual (Hub)`
+            : "Mês tipicamente baixo (Hub)",
+        kind: "promo" as const,
+      };
+    }
+    return {
+      month,
+      label: "Sem padrão sazonal Hub neste mês",
+      kind: "neutral" as const,
+    };
+  });
+
+  const lowPricePeriods =
+    labels.length > 0
+      ? labels
+      : months.map((m) => periodLabelForMonth(m));
+
+  const timingAdvice =
+    narrative ||
+    buildSeasonalityTimingAdvice(months, now) ||
+    null;
+
+  return {
+    markers,
+    note: narrative
+      ? `${narrative} — evidência sazonal do Hub (ConsumerDecision), não um segundo veredicto.`
+      : "Padrão sazonal do Hub para este produto — hipótese histórica, não garantia.",
+    timesBelowCurrent12m: timesBelowHint,
+    sufficient: true,
+    lowPricePeriods,
+    highPriceMonths: [],
+    lowPriceMonthNumbers: months,
+    avgPromoDiscountPct: drop,
+    bestPromoDiscountPct: drop,
+    timingAdvice,
+  };
 }
 
 export function estimateSeasonality(
   history: PricePoint[],
   currentPrice: number,
   timesBelowHint = 0,
+  now = new Date(),
 ): SeasonalityInsight {
+  const empty = {
+    sufficient: false,
+    markers: Array.from({ length: 12 }, (_, i) => ({
+      month: i + 1,
+      label: "Histórico insuficiente",
+      kind: "neutral" as const,
+    })),
+    note: "Histórico insuficiente para estimar padrões sazonais — precisamos de vários meses observados.",
+    timesBelowCurrent12m: timesBelowHint,
+    lowPricePeriods: [],
+    highPriceMonths: [],
+    lowPriceMonthNumbers: [],
+    avgPromoDiscountPct: null,
+    bestPromoDiscountPct: null,
+    timingAdvice: null,
+  };
   const sufficient = hasEnoughSeasonalityData(history);
   if (!sufficient) {
-    return {
-      sufficient: false,
-      markers: Array.from({ length: 12 }, (_, i) => ({
-        month: i + 1,
-        label: "Histórico insuficiente",
-        kind: "neutral" as const,
-      })),
-      note: "Histórico insuficiente para estimar padrões sazonais.",
-      timesBelowCurrent12m: timesBelowHint,
-      lowPricePeriods: [],
-      highPriceMonths: [],
-      avgPromoDiscountPct: null,
-      bestPromoDiscountPct: null,
-    };
+    return empty;
   }
 
   const byMonth = new Map<number, number[]>();
@@ -311,6 +433,7 @@ export function estimateSeasonality(
     drops.length > 0 ? drops.reduce((a, b) => a + b, 0) / drops.length : null;
   const bestPromoDiscountPct = drops.length > 0 ? Math.max(...drops) : null;
 
+  const lowPriceMonthNumbers = promo.map((m) => m.month);
   const lowPricePeriods = [
     ...new Set(promo.map((m) => periodLabelForMonth(m.month))),
   ];
@@ -323,7 +446,7 @@ export function estimateSeasonality(
 
   const note =
     lowPricePeriods.length > 0
-      ? `Com base no histórico Lymiar, os preços mais baixos concentram-se em: ${lowPricePeriods.join(", ")}.`
+      ? `Com base no histórico Lymiar observado, os preços mais baixos concentram-se em: ${lowPricePeriods.join(", ")}. Hipótese a partir dos dados — não é uma garantia de promoção futura.`
       : "Com o histórico disponível, ainda não há um padrão sazonal dominante.";
 
   return {
@@ -333,8 +456,10 @@ export function estimateSeasonality(
     timesBelowCurrent12m: timesBelow,
     lowPricePeriods,
     highPriceMonths,
+    lowPriceMonthNumbers,
     avgPromoDiscountPct,
     bestPromoDiscountPct,
+    timingAdvice: buildSeasonalityTimingAdvice(lowPriceMonthNumbers, now),
   };
 }
 
@@ -429,12 +554,28 @@ export function buildDecisionVerdict(opts: {
   avg30d?: number | null;
   historyLength: number;
   historySpanDays: number;
+  /** sample_days canónico (CD evidence) — gate de extremos. */
+  sampleDays?: number | null;
+  /** ConsumerDecision canónico — sem isto não se conclui BUY/WAIT. */
+  consumerVerdict?: "BUY" | "WAIT" | "UNKNOWN" | null;
 }): { points: DecisionPoint[]; conclusion: string } {
-  const { decision, currentPrice, avg30d, historyLength, historySpanDays: span } = opts;
+  const {
+    decision,
+    currentPrice,
+    avg30d,
+    historyLength,
+    historySpanDays: span,
+    sampleDays,
+    consumerVerdict,
+  } = opts;
   const points: DecisionPoint[] = [];
   const histAvg = decision.historicalAvg ?? avg30d ?? null;
   const histMin = decision.historicalMin ?? null;
   const thin = historyLength < 8 || span < 21;
+  const extremesOk =
+    sampleDays != null &&
+    Number.isFinite(sampleDays) &&
+    sampleDays >= CARD_HIST_SAMPLE_MIN_DAYS;
 
   if (histAvg != null && histAvg > 0 && currentPrice > 0) {
     const vsAvg = ((histAvg - currentPrice) / histAvg) * 100;
@@ -452,8 +593,8 @@ export function buildDecisionVerdict(opts: {
   }
 
   if (
-    decision.isHistoricalMin ||
-    isAbsoluteHistoricalMin(currentPrice, histMin)
+    extremesOk &&
+    (decision.isHistoricalMin || isAbsoluteHistoricalMin(currentPrice, histMin))
   ) {
     points.push({
       kind: "pro",
@@ -468,7 +609,11 @@ export function buildDecisionVerdict(opts: {
         text: "Nunca esteve mais barato no período histórico analisado pelo Lymiar.",
       });
     }
-  } else if (histMin != null && currentPrice > histMin * 1.02) {
+  } else if (
+    extremesOk &&
+    histMin != null &&
+    currentPrice > histMin * 1.02
+  ) {
     points.push({
       kind: "con",
       text: `Ainda ${formatEUR(currentPrice - histMin)} acima do mínimo histórico (${formatEUR(histMin)}).`,
@@ -501,15 +646,15 @@ export function buildDecisionVerdict(opts: {
   const ordered = [...pros, ...cons];
 
   let conclusion: string;
-  if (decision.semaphore === "buy" && pros.length > 0) {
+  if (consumerVerdict === "BUY" && pros.length > 0) {
     conclusion =
       "Se pretende comprar este produto, os dados históricos indicam que este é um momento favorável.";
-  } else if (decision.semaphore === "fair") {
-    conclusion =
-      "Os dados sugerem um preço razoável, mas ainda não o melhor momento absoluto face ao histórico.";
-  } else {
+  } else if (consumerVerdict === "WAIT") {
     conclusion =
       "Com base no histórico disponível, pode ser preferível aguardar uma melhor oportunidade.";
+  } else {
+    conclusion =
+      "Ainda sem veredicto de compra firme — o Lymiar continua a observar o histórico elegível.";
   }
   if (thin) {
     conclusion =
@@ -561,8 +706,11 @@ export function buildLymiarInsights(opts: {
   const histMin = product.historicalMin;
   const avg = product.avg30d;
 
-  // Mínimo histórico — pode aparecer mesmo com confiança moderada se for factual exacto
-  if (isAbsoluteHistoricalMin(price, histMin) || product.decision.isHistoricalMin) {
+  // Mínimo histórico — só com amostra canónica (nunca inventar em histórico fino).
+  if (
+    canShowCardPriceExtremes(product) &&
+    (isAbsoluteHistoricalMin(price, histMin) || product.decision.isHistoricalMin)
+  ) {
     insights.push({
       id: "hist-min",
       icon: "🔥",
@@ -574,7 +722,11 @@ export function buildLymiarInsights(opts: {
 
   // Dicas que exigem confiança ≥ 3
   if (confidence.stars >= 3 && hasEnoughSeasonalityData(product.history)) {
-    if (detectPostLowRise(product.history) && isAbsoluteHistoricalMin(price, histMin)) {
+    if (
+      detectPostLowRise(product.history) &&
+      canShowCardPriceExtremes(product) &&
+      isAbsoluteHistoricalMin(price, histMin)
+    ) {
       insights.push({
         id: "often-rises",
         icon: "📈",
@@ -587,18 +739,22 @@ export function buildLymiarInsights(opts: {
     if (
       seasonality.sufficient &&
       seasonality.lowPricePeriods.length > 0 &&
+      canShowCardPriceExtremes(product) &&
+      histMin != null &&
       histMin > 0 &&
       price > histMin * 1.05
     ) {
       insights.push({
         id: "wait-campaign",
         icon: "⏳",
-        title: "Vale esperar",
+        title: "Padrão sazonal",
         message: `Nos registos Lymiar este produto chegou a cerca de ${formatEUR(histMin)} em períodos como ${seasonality.lowPricePeriods[0]}.`,
       });
     } else if (
+      avg != null &&
       avg > 0 &&
       price > avg * 0.98 &&
+      histMin != null &&
       histMin > 0 &&
       histMin < price * 0.9 &&
       confidence.stars >= 4
@@ -606,7 +762,7 @@ export function buildLymiarInsights(opts: {
       insights.push({
         id: "wait-avg",
         icon: "⏳",
-        title: "Vale esperar",
+        title: "Face ao histórico",
         message: `O preço actual está alinhado com a média. O mínimo registado é ${formatEUR(histMin)}.`,
       });
     }

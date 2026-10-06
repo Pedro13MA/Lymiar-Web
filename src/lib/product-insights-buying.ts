@@ -6,7 +6,10 @@
  */
 
 import type { Product } from "@/lib/types";
-import { resolveConsumerInsightLabel } from "@/lib/consumer-decision";
+import {
+  canShowCardPriceExtremes,
+  resolveConsumerInsightLabel,
+} from "@/lib/consumer-decision";
 
 export type InsightRecommendation =
   | "BUY_NOW"
@@ -146,8 +149,11 @@ export function computeProductInsights(product: Product): ProductInsights {
         ? product.knowledge.completeness
         : 0;
 
+  // Honesty: extremos / «perto do mínimo» só com amostra canónica (mesmo gate dos cards).
+  const extremesOk = canShowCardPriceExtremes(product);
+
   let position = "insufficient";
-  if (cur != null && hmin != null && n >= 3 && hmin > 0) {
+  if (extremesOk && cur != null && hmin != null && n >= 3 && hmin > 0) {
     const pct = ((cur - hmin) / hmin) * 100;
     if (pct <= 2) position = "near_minimum";
     else if (pct <= 5) position = "close_to_minimum";
@@ -160,8 +166,9 @@ export function computeProductInsights(product: Product): ProductInsights {
   }
 
   const atNewMin = Boolean(
-    product.decision?.isHistoricalMin ||
-      (cur != null && hmin != null && cur <= hmin * 1.005 && n >= 3),
+    extremesOk &&
+      (product.decision?.isHistoricalMin ||
+        (cur != null && hmin != null && cur <= hmin * 1.005 && n >= 3)),
   );
 
   let trend = "insufficient";
@@ -417,8 +424,8 @@ export function computeProductInsights(product: Product): ProductInsights {
 
   return {
     bestStore: best?.storeName || best?.store || null,
-    lowestHistorical: hmin,
-    highestHistorical: hmax,
+    lowestHistorical: extremesOk ? hmin : null,
+    highestHistorical: extremesOk ? hmax : null,
     currentPrice: cur,
     currentPosition: position,
     currentPositionLabel: POSITION_LABEL[position],
@@ -486,25 +493,62 @@ export function resolveProductInsights(product: Product): ProductInsights {
         }
       : computeProductInsights(product);
 
+  // Honesty FE: nunca expor extremos / «mínimo histórico» com amostra fina.
+  const gated: ProductInsights = canShowCardPriceExtremes(product)
+    ? fromApi
+    : {
+        ...fromApi,
+        lowestHistorical: null,
+        highestHistorical: null,
+        atNewMinimum: false,
+        atNewMaximum: false,
+        currentPosition:
+          fromApi.currentPosition === "near_minimum" ||
+          fromApi.currentPosition === "close_to_minimum"
+            ? "insufficient"
+            : fromApi.currentPosition,
+        currentPositionLabel:
+          fromApi.currentPosition === "near_minimum" ||
+          fromApi.currentPosition === "close_to_minimum"
+            ? POSITION_LABEL.insufficient
+            : fromApi.currentPositionLabel,
+        cards: (fromApi.cards || []).map((c) =>
+          c.id === "position" &&
+          (fromApi.currentPosition === "near_minimum" ||
+            fromApi.currentPosition === "close_to_minimum")
+            ? {
+                ...c,
+                tone: "caution" as InsightTone,
+                label: POSITION_LABEL.insufficient,
+              }
+            : c,
+        ),
+        summary: (fromApi.summary || []).filter(
+          (s) => !/m[ií]nimo/i.test(s),
+        ),
+        pros: (fromApi.pros || []).filter((s) => !/m[ií]nimo/i.test(s)),
+        timeline: (fromApi.timeline || []).filter((t) => t.id !== "new_min"),
+      };
+
   // Constituição: ConsumerDecision da API manda no veredicto comprador.
   const cd = product.consumerDecision?.verdict;
   if (cd === "BUY") {
     return {
-      ...fromApi,
+      ...gated,
       recommendation: "BUY_NOW",
       recommendationLabel: resolveConsumerInsightLabel(product) || REC_LABEL.BUY_NOW,
     };
   }
   if (cd === "FAIR") {
     return {
-      ...fromApi,
+      ...gated,
       recommendation: "GOOD_PRICE",
       recommendationLabel: resolveConsumerInsightLabel(product) || "Preço justo",
     };
   }
   if (cd === "HIGH") {
     return {
-      ...fromApi,
+      ...gated,
       recommendation: "WATCH",
       recommendationLabel:
         resolveConsumerInsightLabel(product) || "Pode encontrar melhor",
@@ -512,29 +556,29 @@ export function resolveProductInsights(product: Product): ProductInsights {
   }
   if (cd === "WAIT") {
     return {
-      ...fromApi,
+      ...gated,
       recommendation: "WAIT",
       recommendationLabel: resolveConsumerInsightLabel(product) || REC_LABEL.WAIT,
     };
   }
   if (cd === "UNKNOWN") {
     return {
-      ...fromApi,
+      ...gated,
       recommendation: "INSUFFICIENT_DATA",
       recommendationLabel:
         resolveConsumerInsightLabel(product) || REC_LABEL.INSUFFICIENT_DATA,
     };
   }
   // Sem CD: nunca promover insights locais/API a BUY/WAIT de compra.
-  const rec = fromApi.recommendation;
+  const rec = gated.recommendation;
   if (rec === "BUY_NOW" || rec === "WAIT" || rec === "GOOD_PRICE") {
     return {
-      ...fromApi,
+      ...gated,
       recommendation: "INSUFFICIENT_DATA",
       recommendationLabel: REC_LABEL.INSUFFICIENT_DATA,
     };
   }
-  return fromApi;
+  return gated;
 }
 
 export function recommendationShortLabel(

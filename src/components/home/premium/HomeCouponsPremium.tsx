@@ -160,7 +160,10 @@ export function HomeCouponsPremium() {
   }
 
   return (
-    <section className="border-b border-[var(--hm-line)] bg-[var(--hm-bg-soft)]">
+    <section
+      id="cupoes"
+      className="border-b border-[var(--hm-line)] bg-[var(--hm-bg-soft)]"
+    >
       <div className="home-fade mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16 lg:max-w-7xl">
         <p className="home-section-kicker text-sm font-semibold">Complemento</p>
         <h2 className="mt-3 font-display text-2xl font-bold text-[var(--hm-ink)] sm:text-3xl">
